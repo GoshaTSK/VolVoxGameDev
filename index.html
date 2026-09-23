@@ -1,0 +1,3541 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>КубоСфера — программируемые объекты</title>
+<style>
+  :root{--bg:#070c16;--panel:#0f1a2e;--panel-2:#152340;--border:#22334f;
+    --text:#dbe6f6;--muted:#7c8fa9;--accent:#38bdf8;--accent-2:#8b5cf6}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg);color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased}
+  #app{display:grid;grid-template-rows:54px 1fr 236px;height:100vh;transition:grid-template-rows .25s}
+  #app.blocks-expanded{grid-template-rows:54px 120px 1fr}
+  #app.no-transition{transition:none!important}
+  #topbar{display:flex;align-items:center;gap:8px;padding:0 12px;
+    background:linear-gradient(180deg,#101d33,#0c1728);border-bottom:1px solid var(--border);z-index:10;
+    overflow-x:auto;scrollbar-width:none}
+  #topbar::-webkit-scrollbar{display:none}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px;white-space:nowrap}
+  .logo-mark{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:14px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#04101f;
+    box-shadow:0 0 18px rgba(56,189,248,.35)}
+  .badge{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+    background:#4c1d95;color:#e9d5ff;padding:3px 7px;border-radius:5px;border:1px solid #6d28d9}
+  .tabs{display:flex;gap:4px;background:#0a1424;padding:3px;border-radius:10px;border:1px solid var(--border);flex:none}
+  .tab{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;font-size:12.5px;
+    padding:6px 14px;border-radius:7px;cursor:pointer;transition:.15s;white-space:nowrap}
+  .tab:hover{color:var(--text)}
+  .tab.active{background:linear-gradient(135deg,#1e3a5f,#243b63);color:#fff;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+  .tab.active[data-mode="play"]{background:linear-gradient(135deg,#166534,#15803d)}
+  .dim-tab{display:flex;gap:4px;background:#0a1424;padding:3px;border-radius:10px;border:1px solid var(--border);flex:none}
+  .dim-btn{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:700;font-size:12.5px;
+    padding:6px 12px;border-radius:7px;cursor:pointer;transition:.15s;white-space:nowrap;display:flex;align-items:center;gap:5px}
+  .dim-btn:hover{color:var(--text)}
+  .dim-btn.active{background:linear-gradient(135deg,#4c1d95,#6d28d9);color:#fff;box-shadow:0 0 12px rgba(139,92,246,.35)}
+  .spacer{flex:1}
+  .score-hud{display:flex;align-items:center;gap:7px;font-weight:800;font-size:14px;
+    background:#0a1424;border:1px solid var(--border);padding:6px 12px;border-radius:9px;color:#fbbf24;flex:none}
+  .score-hud span{color:#fff}
+  .score-hud.hit{box-shadow:0 0 0 2px #ef4444,0 0 22px rgba(239,68,68,.6)}
+  .timer-hud{display:flex;align-items:center;gap:6px;font-weight:800;font-size:14px;
+    background:#0a1424;border:1px solid var(--border);padding:6px 12px;border-radius:9px;color:#22d3ee;
+    font-variant-numeric:tabular-nums;flex:none}
+  .btn{font:inherit;font-size:12px;font-weight:600;padding:7px 12px;border-radius:8px;cursor:pointer;
+    background:#16233c;color:var(--text);border:1px solid var(--border);transition:.15s;white-space:nowrap;flex:none}
+  .btn:hover{background:#1d2f4f;border-color:#31486e}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),#0ea5e9);color:#04101f;border-color:transparent;font-weight:700}
+  .btn.mario{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;border-color:transparent;font-weight:700}
+  .btn.transfer{background:linear-gradient(135deg,#0891b2,#06b6d4);color:#fff;border-color:transparent;font-weight:700}
+  .btn.games{background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff;border-color:transparent;font-weight:800}
+  #main{display:grid;grid-template-columns:252px 1fr 288px;overflow:hidden;min-height:0;height:100%}
+  #main.playing{grid-template-columns:1fr}
+  #main.playing aside{display:none}
+  aside{background:var(--panel);overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column}
+  #palette{border-right:1px solid var(--border)}
+  #inspector{border-left:1px solid var(--border)}
+  aside::-webkit-scrollbar{width:8px}
+  aside::-webkit-scrollbar-thumb{background:#1e2f4c;border-radius:4px}
+  .panel-title{font-size:10.5px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);
+    padding:14px 14px 9px;display:flex;align-items:center;justify-content:space-between}
+  .panel-title .count{font-size:9.5px;color:#5a6d87;background:#0a1424;padding:2px 6px;border-radius:4px;font-weight:700}
+  .pal-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 11px 14px}
+  .pal-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:9px 4px 8px;
+    background:var(--panel-2);border:1px solid var(--border);border-radius:10px;cursor:pointer;
+    transition:.15s;user-select:none}
+  .pal-item:hover{background:#1c2e4d;border-color:var(--accent);transform:translateY(-2px)}
+  .pal-item.enemy{border-color:#7f1d1d;background:#1e1010}
+  .pal-item.finish{border-color:#166534;background:#0a1f10}
+  .pal-item.heart{border-color:#be185d;background:#1e0816}
+  .pal-item.water{border-color:#0e7490;background:#0a1e28}
+  .pal-item.lava{border-color:#9a3412;background:#1e0e08}
+  .pal-item.cloud{border-color:#475569;background:#111827}
+  .pal-item.mountain{border-color:#525252;background:#141414}
+  .pal-item .ico{font-size:19px;line-height:1}
+  .pal-item .lbl{font-size:10px;color:#a9bcd4;font-weight:600;text-align:center;line-height:1.15}
+  .scene-list{list-style:none;padding:0 11px 18px;display:flex;flex-direction:column;gap:3px}
+  .scene-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;
+    font-size:12px;color:#b8c8dd;transition:.12s;border:1px solid transparent}
+  .scene-item:hover{background:#16253f}
+  .scene-item.active{background:#1b3054;border-color:#2f5a8c;color:#fff}
+  .scene-item .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none}
+  .scene-item.enemy .dot{background:#ef4444}
+  .scene-item.finish .dot{background:#22c55e}
+  .scene-item.heart .dot{background:#ec4899}
+  .scene-item.water .dot{background:#22d3ee}
+  .scene-item.lava .dot{background:#f97316}
+  .scene-item.cloud .dot{background:#e5e7eb}
+  .scene-item.mountain .dot{background:#a3a3a3}
+  .scene-item .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+  .scene-item .tag{font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;flex:none}
+  .scene-item .solid-tag{color:#fbbf24;background:#422006}
+  .scene-item .ghost-tag{color:#7c8fa9;background:#1e2f4c}
+  .scene-item .enemy-tag{color:#fca5a5;background:#3b1414}
+  .scene-item .finish-tag{color:#bbf7d0;background:#0f2b16}
+  .scene-item .hazard-tag{color:#fed7aa;background:#431407}
+  #viewport{position:relative;background:#050a13;overflow:hidden;min-height:0;min-width:0}
+  #canvas{display:block;width:100%;height:100%;touch-action:none}
+  .sky2d{position:absolute;inset:0;display:none;z-index:0;transition:background .35s}
+  #main.dim2d .sky2d{display:block}
+  #main.dim2d #canvas{position:relative;z-index:1;background:transparent}
+  .vp-hint{position:absolute;left:14px;bottom:14px;font-size:11.5px;color:#8fa4c0;
+    background:rgba(10,20,36,.82);border:1px solid var(--border);padding:7px 13px;border-radius:8px;
+    backdrop-filter:blur(8px);pointer-events:none;line-height:1.6;z-index:5}
+  .vp-hint b{color:var(--accent);font-weight:700}
+  .play-help{position:absolute;left:50%;top:16px;transform:translateX(-50%);
+    font-size:12px;font-weight:600;color:#a7f3d0;background:rgba(6,40,26,.85);
+    border:1px solid #14532d;padding:9px 18px;border-radius:10px;backdrop-filter:blur(8px);
+    display:none;pointer-events:none;white-space:nowrap;z-index:6}
+  #main.playing .play-help{display:block}
+  #main.playing .vp-hint{display:none}
+  .timer-big{position:absolute;left:50%;top:60px;transform:translateX(-50%);
+    font:800 30px/1 ui-monospace,Menlo,monospace;color:#22d3ee;
+    text-shadow:0 0 18px rgba(34,211,238,.65),0 2px 6px rgba(0,0,0,.7);
+    font-variant-numeric:tabular-nums;pointer-events:none;z-index:7;display:none;text-align:center}
+  #main.playing .timer-big{display:block}
+  .timer-big .lbl{font-size:11px;font-weight:800;letter-spacing:2px;color:rgba(34,211,238,.7);
+    display:block;margin-bottom:5px}
+  .timer-big.record{color:#fbbf24}
+  .hit-flash{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;
+    background:radial-gradient(ellipse at center, transparent 30%, rgba(220,38,38,.75) 100%);
+    transition:opacity .12s ease-out}
+  .hit-flash.active{opacity:1}
+  .view-hud{position:absolute;right:14px;top:14px;display:none;z-index:6}
+  #main.playing .view-hud{display:block}
+  .inv-hud{position:absolute;right:14px;top:60px;display:none;z-index:6}
+  #main.playing .inv-hud{display:block}
+  .view-btn,.inv-btn{font:inherit;font-size:12px;font-weight:700;padding:9px 15px;border-radius:9px;cursor:pointer;
+    color:#dbe6f6;background:rgba(10,20,36,.85);border:1px solid var(--border);
+    backdrop-filter:blur(8px);transition:.15s;display:flex;align-items:center;gap:7px}
+  .view-btn:hover,.inv-btn:hover{background:rgba(24,40,68,.95);border-color:var(--accent)}
+  .inv-btn.on{border-color:#f97316;color:#fdba74}
+  .view-btn .k,.inv-btn .k{font-size:10px;color:var(--muted);background:#0a1424;padding:2px 6px;border-radius:5px;
+    border:1px solid var(--border);font-weight:800}
+  .zoom-hud{position:absolute;right:14px;top:14px;display:none;z-index:6;gap:4px;flex-direction:column;align-items:flex-end}
+  #main.dim2d:not(.playing) .zoom-hud{display:flex}
+  .zoom-pill{display:flex;align-items:center;gap:8px;background:rgba(10,20,36,.88);
+    border:1px solid var(--border);border-radius:9px;padding:8px 12px;
+    font:700 12px/1 inherit;color:#a5f3fc;backdrop-filter:blur(8px);font-variant-numeric:tabular-nums}
+  .zoom-pill .lbl{color:var(--muted);font-weight:600;font-size:10.5px;letter-spacing:.5px}
+  .zoom-pill button{border:0;background:#132540;color:#a5f3fc;width:22px;height:22px;
+    border-radius:6px;cursor:pointer;font-weight:800;font-size:13px;display:grid;place-items:center}
+  .weapon-hud{position:absolute;left:14px;top:14px;display:none;z-index:6;
+    font:inherit;font-size:12px;font-weight:700;color:#7dd3fc;
+    background:rgba(8,47,73,.85);border:1px solid #0e7490;padding:9px 15px;border-radius:9px;
+    backdrop-filter:blur(8px);align-items:center;gap:9px;white-space:nowrap}
+  #main.playing .weapon-hud{display:flex}
+  .weapon-hud .dot{width:8px;height:8px;border-radius:50%;background:#22d3ee;box-shadow:0 0 10px #22d3ee;
+    animation:pulseDot 1.6s ease-in-out infinite}
+  @keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.4}}
+  .crosshair{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.8);
+    box-shadow:0 0 0 1.5px rgba(0,0,0,.5);display:none;pointer-events:none;z-index:5}
+  #main.playing.first-person:not(.dim2d) .crosshair{display:block}
+  .drag-badge{position:absolute;left:14px;top:14px;display:none;z-index:6;
+    font-size:11.5px;font-weight:700;color:#fde68a;background:rgba(66,32,6,.9);
+    border:1px solid #78350f;padding:7px 13px;border-radius:8px;backdrop-filter:blur(8px)}
+  #main.dragging .drag-badge{display:block}
+  #main.panning .drag-badge{display:block;color:#a5f3fc;background:rgba(8,47,73,.92);border-color:#0e7490}
+  .modal{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;
+    background:rgba(5,8,15,.85);backdrop-filter:blur(6px)}
+  .modal.active{display:flex}
+  .modal-content{background:#0f1a2e;border:1px solid var(--border);border-radius:16px;
+    padding:30px 40px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.7);max-width:440px;animation:goPop .3s ease-out}
+  @keyframes goPop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+  .modal-content h2{font-size:22px;margin-bottom:10px}
+  .modal-content .gscore{color:var(--muted);margin-bottom:22px;font-size:14px}
+  .modal-content .gscore span{color:#fbbf24;font-weight:800;font-size:20px}
+  .modal-buttons{display:flex;gap:10px;justify-content:center}
+  .modal-content.victory{border-color:#22c55e}.modal-content.victory h2{color:#bbf7d0}
+  .modal-content.gameover{border-color:#7f1d1d}.modal-content.gameover h2{color:#fca5a5}
+  .final-time{font:800 42px/1 ui-monospace,Menlo,monospace;color:#22d3ee;
+    font-variant-numeric:tabular-nums;margin:6px 0;text-shadow:0 0 22px rgba(34,211,238,.5)}
+  .best-time{font-size:13px;color:var(--muted);margin-bottom:20px}
+  .best-time span{color:#fbbf24;font-weight:800}
+  .new-record{display:inline-block;font-size:11px;font-weight:800;letter-spacing:1.5px;
+    color:#04101f;background:linear-gradient(135deg,#fbbf24,#f59e0b);padding:4px 10px;border-radius:6px;
+    margin-bottom:10px;text-transform:uppercase}
+
+  .games-modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
+    background:rgba(3,6,12,.88);backdrop-filter:blur(8px);padding:20px}
+  .games-modal.active{display:flex;animation:fadeIn .2s}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .games-panel{width:100%;max-width:1100px;max-height:92vh;background:#0c1728;
+    border:1px solid var(--border);border-radius:18px;display:flex;flex-direction:column;
+    box-shadow:0 30px 80px rgba(0,0,0,.75);overflow:hidden}
+  .games-head{display:flex;align-items:center;gap:12px;padding:16px 22px;
+    border-bottom:1px solid var(--border);background:linear-gradient(180deg,#101d33,#0c1728)}
+  .games-head h2{font-size:18px;font-weight:800;display:flex;align-items:center;gap:10px}
+  .games-head h2 span{font-size:22px}
+  .games-head .sub{font-size:11.5px;color:var(--muted);font-weight:500}
+  .edit-pill{padding:7px 14px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;
+    background:#16233c;border:1px solid var(--border);color:var(--text);transition:.15s;
+    display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .edit-pill:hover{background:#1d2f4f;border-color:#31486e}
+  .edit-pill.unlocked{background:linear-gradient(135deg,#166534,#22c55e);border-color:#22c55e;color:#fff;
+    box-shadow:0 0 14px rgba(34,197,94,.45)}
+  .games-body{padding:22px;overflow-y:auto;flex:1}
+  .games-body::-webkit-scrollbar{width:10px}
+  .games-body::-webkit-scrollbar-thumb{background:#1e2f4c;border-radius:5px}
+  .games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+  .game-card{background:linear-gradient(160deg,#152340,#0f1a2e);border:1px solid var(--border);
+    border-radius:14px;padding:16px 14px 14px;cursor:pointer;transition:.18s;text-align:center;position:relative;
+    overflow:hidden;user-select:none}
+  .game-card:hover{transform:translateY(-4px);border-color:#38bdf8;
+    box-shadow:0 12px 30px rgba(56,189,248,.22)}
+  .game-card::before{content:'';position:absolute;inset:0;background:
+    radial-gradient(circle at top right,rgba(56,189,248,.14),transparent 55%);opacity:0;transition:.18s}
+  .game-card:hover::before{opacity:1}
+  .game-card .thumb{font-size:44px;line-height:1;margin-bottom:8px;filter:drop-shadow(0 6px 12px rgba(0,0,0,.4))}
+  .game-card .name{font-size:14px;font-weight:800;color:#fff;margin-bottom:5px}
+  .game-card .desc{font-size:11px;color:var(--muted);line-height:1.4}
+  .game-card .prog-badge{position:absolute;top:8px;right:8px;font-size:9px;font-weight:800;
+    background:#4c1d95;color:#e9d5ff;padding:2px 6px;border-radius:5px;letter-spacing:.4px}
+  .game-card .play-overlay{position:absolute;bottom:10px;right:10px;font-size:10px;
+    background:rgba(56,189,248,.16);border:1px solid #38bdf8;color:#7dd3fc;
+    padding:3px 8px;border-radius:6px;font-weight:700;opacity:0;transition:.15s}
+  .game-card:hover .play-overlay{opacity:1}
+  .games-foot{padding:12px 22px;border-top:1px solid var(--border);
+    background:#0a1424;font-size:11.5px;color:var(--muted);line-height:1.6}
+  .games-foot b{color:#c4b5fd}
+
+  .btn.danger{background:#3b1414;color:#fca5a5;border-color:#7f1d1d}
+  .btn.danger:hover{background:#4c1a1a;border-color:#9a2323}
+
+  .insp-empty{padding:6px 15px 20px;font-size:12.5px;color:var(--muted);line-height:1.55}
+  .insp-empty kbd{background:#0a1424;border:1px solid var(--border);border-radius:4px;
+    padding:1px 5px;font:700 10.5px inherit;color:#a5f3fc;margin:0 2px}
+  .obj-head{display:flex;align-items:center;gap:9px;padding:14px 15px 12px;border-bottom:1px solid var(--border)}
+  .obj-head .dot{width:11px;height:11px;border-radius:4px;background:var(--accent);box-shadow:0 0 10px rgba(56,189,248,.5)}
+  .obj-head.enemy .dot{background:#ef4444}
+  .obj-head.finish .dot{background:#22c55e}
+  .obj-head.heart .dot{background:#ec4899}
+  .obj-head.water .dot{background:#22d3ee}
+  .obj-head.lava .dot{background:#f97316}
+  .obj-head.cloud .dot{background:#e5e7eb}
+  .obj-head.mountain .dot{background:#a3a3a3}
+  .obj-head .nm{font-weight:700;font-size:13.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .obj-head .solid-pip{font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:.4px}
+  .obj-head .solid-pip.on{background:#422006;color:#fbbf24}
+  .obj-head .solid-pip.off{background:#1e2f4c;color:#7c8fa9}
+  .section{padding:11px 15px 0;border-top:1px solid var(--border);margin-top:12px}
+  .section h4{font-size:10px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);
+    margin-bottom:9px;display:flex;align-items:center;gap:6px}
+  .section h4::before{content:'';width:3px;height:10px;background:var(--accent);border-radius:2px}
+  .field{padding:0 0 9px}
+  .field label{display:flex;justify-content:space-between;align-items:center;gap:8px;
+    font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px}
+  .field label .lb-txt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  input[type=range]{width:100%;height:4px;border-radius:3px;background:#1e2f4c;outline:none;-webkit-appearance:none;appearance:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+    background:var(--accent);cursor:pointer;box-shadow:0 0 8px rgba(56,189,248,.6)}
+
+  /* ★ Числовое поле рядом со слайдером */
+  .num-inp{
+    width:70px;flex:none;
+    background:#0a1424;border:1px solid var(--border);border-radius:6px;
+    color:var(--accent);font:inherit;font-weight:700;font-size:11px;
+    padding:3px 7px;text-align:right;outline:none;
+    font-variant-numeric:tabular-nums;
+    transition:border-color .15s,background .15s,box-shadow .15s;
+  }
+  .num-inp:hover{border-color:#31486e;background:#0e1a30}
+  .num-inp:focus{border-color:var(--accent);background:#0e1a30;
+    box-shadow:0 0 0 2px rgba(56,189,248,.18)}
+  .num-inp::-webkit-outer-spin-button,
+  .num-inp::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .num-inp[type=number]{-moz-appearance:textfield;appearance:textfield}
+  .num-inp.invalid{border-color:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.18)}
+
+  .scale-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;padding:0 0 9px}
+  .scale-btn{font:inherit;font-size:11px;font-weight:700;padding:6px 0;border-radius:7px;cursor:pointer;
+    background:#132540;color:#a9bcd4;border:1px solid var(--border);transition:.14s}
+  .swatches{display:flex;flex-wrap:wrap;gap:5px;padding:0 0 10px}
+  .sw{width:22px;height:22px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:.12s}
+  .sw:hover{transform:scale(1.15)}.sw.active{border-color:#fff;box-shadow:0 0 10px rgba(255,255,255,.4)}
+  .tex-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:0 0 8px}
+  .tex-chip{aspect-ratio:1;border-radius:7px;cursor:pointer;border:2px solid var(--border);
+    overflow:hidden;position:relative;transition:.14s;background:#0a1424;display:grid;place-items:center}
+  .tex-chip:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .tex-chip.active{border-color:#22d3ee;box-shadow:0 0 10px rgba(34,211,238,.5)}
+  .tex-chip canvas,.tex-chip img{width:100%;height:100%;display:block;object-fit:cover}
+  .tex-chip .no-tex{font-size:16px;color:#5a6d87}
+  .tex-upload{display:flex;align-items:center;gap:8px;padding:0 0 10px}
+  .tex-upload label{flex:1;font-size:11px;font-weight:700;padding:7px 10px;border-radius:7px;
+    background:#132540;color:#a5f3fc;border:1px dashed #2b4a75;cursor:pointer;text-align:center;transition:.14s}
+  .tex-upload label:hover{background:#1a3157;border-style:solid}
+  .tex-upload input[type=file]{display:none}
+  .bg-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:0 0 10px}
+  .bg-chip{aspect-ratio:1;border-radius:7px;cursor:pointer;border:2px solid var(--border);
+    transition:.14s;position:relative;overflow:hidden}
+  .bg-chip:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .bg-chip.active{border-color:#22d3ee}
+  .solid-switch{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:#0a1424;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+  .solid-switch .txt{font-size:11.5px;font-weight:600;color:#b8c8dd;flex:1;line-height:1.35}
+  .solid-switch .txt b{display:block;color:#fff;font-size:12.5px;margin-bottom:2px}
+  .solid-switch .txt span{color:var(--muted);font-size:10.5px}
+  .switch{position:relative;width:46px;height:24px;background:#1e2f4c;border-radius:12px;cursor:pointer;transition:.2s;flex:none}
+  .switch::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
+    background:#7c8fa9;transition:.2s}
+  .switch.on{background:linear-gradient(135deg,#f59e0b,#fbbf24)}
+  .switch.on::after{left:24px;background:#fff}
+  .layer-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;padding:0 0 6px}
+  .layer-btn{font:inherit;font-size:10.5px;font-weight:700;padding:8px 0;border-radius:7px;cursor:pointer;
+    background:#132540;color:#a9bcd4;border:1px solid var(--border);transition:.14s;line-height:1.15;text-align:center}
+  .layer-btn.active{background:linear-gradient(135deg,#0891b2,#06b6d4);color:#fff;border-color:#22d3ee}
+  .layer-hint{font-size:10.5px;color:#7c8fa9;line-height:1.5;margin-bottom:10px;
+    background:#0a1424;border:1px solid var(--border);border-radius:8px;padding:7px 10px}
+  .insp-actions{display:flex;gap:7px;padding:16px 0 22px}
+  .insp-actions .btn{flex:1;text-align:center}
+  .enemy-note{font-size:11.5px;color:#fca5a5;line-height:1.55;
+    background:#2a0f0f;border:1px solid #7f1d1d;border-radius:8px;margin:10px 15px 0;padding:9px 12px}
+  .finish-note{font-size:11.5px;color:#bbf7d0;line-height:1.55;
+    background:#0a1f10;border:1px solid #166534;border-radius:8px;margin:10px 15px 0;padding:9px 12px}
+  .heart-note{font-size:11.5px;color:#fbcfe8;line-height:1.55;
+    background:#1e0816;border:1px solid #be185d;border-radius:8px;margin:10px 15px 0;padding:9px 12px}
+  .lava-note{font-size:11.5px;color:#fed7aa;line-height:1.55;
+    background:#1e0e08;border:1px solid #9a3412;border-radius:8px;margin:10px 15px 0;padding:9px 12px}
+  .water-note{font-size:11.5px;color:#a5f3fc;line-height:1.55;
+    background:#0a1e28;border:1px solid #0e7490;border-radius:8px;margin:10px 15px 0;padding:9px 12px}
+  .cloud-note{font-size:11.5px;color:#e5e7eb;line-height:1.55;
+    background:#111827;border:1px solid #475569;border-radius:8px;margin:10px 15px 0;padding:9px 12px}
+  .mountain-note{font-size:11.5px;color:#d4d4d4;line-height:1.55;
+    background:#141414;border:1px solid #525252;border-radius:8px;margin:10px 15px 0;padding:9px 12px}
+  .prog-note{font-size:11.5px;color:#c4b5fd;line-height:1.55;
+    background:#1e1b4b;border:1px solid #6d28d9;border-radius:8px;margin:10px 15px 0;padding:9px 12px}
+
+  #blocks{background:var(--panel);border-top:1px solid var(--border);
+    display:flex;flex-direction:column;overflow:hidden;position:relative;min-height:0}
+  .blocks-head{display:flex;align-items:center;gap:12px;padding:8px 14px;
+    border-bottom:1px solid var(--border);background:#0c1728;flex:none}
+  .blocks-head h3{font-size:12.5px;font-weight:700}
+  .blocks-head h3 em{font-style:normal;color:var(--accent)}
+  #blocklyDiv{flex:1;width:100%;min-height:0;min-width:0}
+  #blocklyDiv .blocklyToolboxDiv{background:#0c1728!important;border-right:1px solid var(--border)}
+  #blocklyDiv .blocklyTreeRow{padding:6px 4px!important;border-radius:8px;margin:2px 4px}
+  #blocklyDiv .blocklyTreeLabel{font-family:'Inter',sans-serif!important;font-size:12.5px!important;font-weight:600}
+  #blocklyDiv .blocklyFlyout{background:#0f1a2e}
+  #blocklyDiv .blocklyFlyoutBackground{fill:#0f1a2e;fill-opacity:1}
+  .blocklyEmptyState{padding:30px 20px;color:#7c8fa9;font-size:13px;text-align:center}
+  #blocklyDiv::-webkit-scrollbar{width:8px;height:8px}
+  #blocklyDiv::-webkit-scrollbar-thumb{background:#1e2f4c;border-radius:4px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="logo"><span class="logo-mark">◈</span> КубоСфера <span class="badge" id="modeBadge">3D</span></div>
+    <div class="tabs">
+      <button class="tab active" data-mode="build">🔨 Конструирование</button>
+      <button class="tab" data-mode="play">▶ Играть</button>
+    </div>
+    <div class="dim-tab">
+      <button class="dim-btn active" data-dim="3d">🎲 3D</button>
+      <button class="dim-btn" data-dim="2d">📐 2D</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="score-hud" id="scoreHud">❤️ <span id="scoreVal">0</span></div>
+    <div class="timer-hud" id="timerHud">⏱ <span id="timerVal">00:00.00</span></div>
+    <button class="btn games" id="btnGames">🎮 Примеры игр</button>
+    <button class="btn transfer" id="btnTo2D">→ 2D</button>
+    <button class="btn transfer" id="btnTo3D">→ 3D</button>
+    <button class="btn mario" id="btnMario">🍄 Марио</button>
+    <button class="btn" id="btnClear">Очистить</button>
+  </header>
+  <div id="main">
+    <aside id="palette">
+      <div class="panel-title">Библиотека <span class="count" id="palCount">0</span></div>
+      <div class="pal-grid" id="palGrid"></div>
+      <div class="panel-title">Объекты <span class="count" id="objCount">0</span></div>
+      <ul class="scene-list" id="sceneList"></ul>
+    </aside>
+    <div id="viewport">
+      <div class="sky2d" id="sky2d"></div>
+      <canvas id="canvas"></canvas>
+      <div class="hit-flash" id="hitFlash"></div>
+      <div class="crosshair"></div>
+      <div class="drag-badge" id="dragBadge">🖱</div>
+      <div class="zoom-hud" id="zoomHud">
+        <div class="zoom-pill">
+          <button id="zoomOutBtn">−</button>
+          <span><span class="lbl">ZOOM</span> <span id="zoomVal">100%</span></span>
+          <button id="zoomInBtn">+</button>
+          <button id="zoomResetBtn" style="width:auto;padding:0 8px;font-size:10px">⤾</button>
+        </div>
+      </div>
+      <div class="weapon-hud"><span class="dot"></span> 🔫 БЛАСТЕР · ЛКМ — огонь</div>
+      <div class="timer-big" id="timerBig"><span class="lbl">ВРЕМЯ</span><span id="timerBigVal">00:00.00</span></div>
+      <div class="view-hud">
+        <button class="view-btn" id="viewBtn"><span id="viewBtnLabel">👁 3-е лицо</span><span class="k">V</span></button>
+      </div>
+      <div class="inv-hud">
+        <button class="inv-btn on" id="invBtn"><span id="invBtnLabel">🔄 Мышь X: инверт.</span><span class="k">I</span></button>
+      </div>
+      <div class="vp-hint" id="vpHint"></div>
+      <div class="play-help" id="playHelp">Кликните для захвата мыши</div>
+      <div class="modal" id="winModal">
+        <div class="modal-content victory">
+          <div id="newRecordBadge" class="new-record" style="display:none">🏆 Новый рекорд!</div>
+          <h2>🏁 ФИНИШ!</h2>
+          <div class="final-time" id="winTime">00:00.00</div>
+          <div class="best-time">Лучшее время: <span id="bestTime">—</span></div>
+          <div class="modal-buttons">
+            <button class="btn primary" id="btnWinRestart">↻ Ещё раз</button>
+            <button class="btn" id="btnWinToBuild">🔨 В редактор</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal" id="gameoverModal">
+        <div class="modal-content gameover">
+          <h2>💀 Робот рассыпался!</h2>
+          <p class="gscore">Собрано очков: <span id="finalScore">0</span></p>
+          <div class="modal-buttons">
+            <button class="btn primary" id="btnRestart">↻ Заново</button>
+            <button class="btn" id="btnToBuild">🔨 В редактор</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside id="inspector">
+      <div class="panel-title">Свойства объекта</div>
+      <div id="inspectorBody"></div>
+    </aside>
+  </div>
+  <section id="blocks">
+    <div class="blocks-head">
+      <h3>🧩 Логика: <em id="blocksTarget">объект не выбран</em></h3>
+      <span id="blocksCount" style="font-size:11px;color:#7c8fa9"></span>
+      <div style="flex:1"></div>
+      <button class="btn" id="btnBlocksExample" title="Пример: облако летит вверх">💡 Пример</button>
+      <button class="btn" id="btnBlocksXml" title="Экспорт XML">💾 XML</button>
+      <button class="btn danger" id="btnBlocksClear">🗑 Очистить</button>
+      <button class="btn" id="btnBlocksExpand">⛶</button>
+    </div>
+    <div id="blocklyDiv"></div>
+  </section>
+</div>
+
+<div class="games-modal" id="gamesModal">
+  <div class="games-panel">
+    <div class="games-head">
+      <h2><span>🕹️</span> Легендарные игры</h2>
+      <div class="sub">Один уровень каждой классики с готовыми блоками</div>
+      <div style="flex:1"></div>
+      <button class="edit-pill" id="btnEditToggle">🔒 Редактировать</button>
+      <button class="btn" id="btnGamesClose">✕ Закрыть</button>
+    </div>
+    <div class="games-body"><div class="games-grid" id="gamesGrid"></div></div>
+    <div class="games-foot">
+      Нажмите на игру — загрузится уровень и автоматически запустится.
+      В <b>режиме редактирования</b> уровень останется в конструкторе: выбирайте объекты и смотрите их блоки внизу.
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/blockly@10.4.3/blockly.min.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const $ = id => document.getElementById(id);
+const viewport = $('viewport'), canvas = $('canvas'), mainEl = $('main');
+const appEl = document.getElementById('app');
+const dragBadge = $('dragBadge'), hitFlash = $('hitFlash'), scoreHud = $('scoreHud');
+const timerHud = $('timerHud'), timerVal = $('timerVal'), timerBig = $('timerBig'), timerBigVal = $('timerBigVal');
+const winModal = $('winModal'), gameoverModal = $('gameoverModal');
+const modeBadge = $('modeBadge'), vpHint = $('vpHint'), sky2d = $('sky2d');
+const objCountEl = $('objCount'), zoomVal = $('zoomVal');
+
+/* =============================================================
+   BLOCKLY
+============================================================= */
+const KEY_OPTIONS = [
+  ['пробел','Space'],['вверх','ArrowUp'],['вниз','ArrowDown'],['влево','ArrowLeft'],['вправо','ArrowRight'],
+  ['W','KeyW'],['A','KeyA'],['S','KeyS'],['D','KeyD'],['Q','KeyQ'],['E','KeyE'],['R','KeyR'],
+];
+
+function initBlocklyBlocks(){
+  if(typeof Blockly === 'undefined') return;
+  Blockly.defineBlocksWithJsonArray([
+    { type:'event_flag',  message0:'когда 🏁 нажат', colour:'#FFBF00', nextStatement:null },
+    { type:'event_start', message0:'когда игра началась', colour:'#FFBF00', nextStatement:null },
+    { type:'event_key',   message0:'когда клавиша %1 нажата',
+      args0:[{type:'field_dropdown', name:'KEY', options:KEY_OPTIONS}], colour:'#FFBF00', nextStatement:null },
+    { type:'event_near',  message0:'когда игрок рядом', colour:'#FFBF00', nextStatement:null },
+    { type:'event_touch', message0:'когда игрок касается', colour:'#FFBF00', nextStatement:null },
+
+    { type:'control_forever', message0:'повторять всегда %1 %2',
+      args0:[{type:'input_dummy'},{type:'input_statement', name:'BODY'}], colour:'#FFAB19', previousStatement:null, nextStatement:null },
+    { type:'control_repeat', message0:'повторить %1 раз %2 %3',
+      args0:[{type:'input_value', name:'N', check:'Number'},{type:'input_dummy'},{type:'input_statement', name:'BODY'}],
+      colour:'#FFAB19', previousStatement:null, nextStatement:null },
+    { type:'control_if', message0:'если %1 то %2 %3',
+      args0:[{type:'input_value', name:'COND', check:'Boolean'},{type:'input_dummy'},{type:'input_statement', name:'BODY'}],
+      colour:'#FFAB19', previousStatement:null, nextStatement:null },
+    { type:'control_if_else', message0:'если %1 то %2 %3 иначе %4 %5',
+      args0:[{type:'input_value', name:'COND', check:'Boolean'},{type:'input_dummy'},{type:'input_statement', name:'BODY'},{type:'input_dummy'},{type:'input_statement', name:'ELSE'}],
+      colour:'#FFAB19', previousStatement:null, nextStatement:null },
+    { type:'control_wait', message0:'ждать %1 секунд',
+      args0:[{type:'input_value', name:'N', check:'Number'}], colour:'#FFAB19', previousStatement:null, nextStatement:null },
+    { type:'control_wait_until', message0:'ждать до %1',
+      args0:[{type:'input_value', name:'COND', check:'Boolean'}], colour:'#FFAB19', previousStatement:null, nextStatement:null },
+
+    { type:'motion_move', message0:'идти %1 шагов',
+      args0:[{type:'input_value', name:'N', check:'Number'}], colour:'#4C97FF', previousStatement:null, nextStatement:null },
+    { type:'motion_point_dir', message0:'повернуться в направлении %1°',
+      args0:[{type:'input_value', name:'D', check:'Number'}], colour:'#4C97FF', previousStatement:null, nextStatement:null },
+    { type:'motion_turn', message0:'повернуть на %1°',
+      args0:[{type:'input_value', name:'D', check:'Number'}], colour:'#4C97FF', previousStatement:null, nextStatement:null },
+    { type:'motion_goto_xy', message0:'перейти в x: %1 y: %2',
+      args0:[{type:'input_value', name:'X', check:'Number'},{type:'input_value', name:'Y', check:'Number'}],
+      colour:'#4C97FF', previousStatement:null, nextStatement:null },
+    { type:'motion_change_x', message0:'изменить x на %1',
+      args0:[{type:'input_value', name:'N', check:'Number'}], colour:'#4C97FF', previousStatement:null, nextStatement:null },
+    { type:'motion_change_y', message0:'изменить y на %1',
+      args0:[{type:'input_value', name:'N', check:'Number'}], colour:'#4C97FF', previousStatement:null, nextStatement:null },
+    { type:'motion_change_z', message0:'изменить высоту на %1',
+      args0:[{type:'input_value', name:'N', check:'Number'}], colour:'#4C97FF', previousStatement:null, nextStatement:null },
+    { type:'motion_bounce', message0:'подпрыгнуть на %1',
+      args0:[{type:'input_value', name:'N', check:'Number'}], colour:'#4C97FF', previousStatement:null, nextStatement:null },
+    { type:'motion_float', message0:'парить', colour:'#4C97FF', previousStatement:null, nextStatement:null },
+    { type:'motion_unfloat', message0:'перестать парить', colour:'#4C97FF', previousStatement:null, nextStatement:null },
+    { type:'motion_spin', message0:'вращаться', colour:'#4C97FF', previousStatement:null, nextStatement:null },
+
+    { type:'looks_say', message0:'сказать %1',
+      args0:[{type:'input_value', name:'T', check:'String'}], colour:'#9966FF', previousStatement:null, nextStatement:null },
+    { type:'looks_change_size', message0:'изменить размер на %1 %',
+      args0:[{type:'input_value', name:'N', check:'Number'}], colour:'#9966FF', previousStatement:null, nextStatement:null },
+    { type:'looks_show', message0:'показать', colour:'#9966FF', previousStatement:null, nextStatement:null },
+    { type:'looks_hide', message0:'спрятать', colour:'#9966FF', previousStatement:null, nextStatement:null },
+    { type:'looks_recolor', message0:'случайный цвет', colour:'#9966FF', previousStatement:null, nextStatement:null },
+
+    { type:'sensing_keypressed', message0:'клавиша %1 нажата?',
+      args0:[{type:'field_dropdown', name:'KEY', options:KEY_OPTIONS}], colour:'#5CB1D6', output:'Boolean' },
+    { type:'sensing_near',  message0:'игрок рядом?', colour:'#5CB1D6', output:'Boolean' },
+    { type:'sensing_touch', message0:'игрок касается?', colour:'#5CB1D6', output:'Boolean' },
+    { type:'sensing_dist',  message0:'расстояние до игрока', colour:'#5CB1D6', output:'Number' },
+    { type:'sensing_pos',   message0:'позиция %1',
+      args0:[{type:'field_dropdown', name:'AXIS', options:[['x','x'],['y','y'],['высота','z']]}],
+      colour:'#5CB1D6', output:'Number' },
+    { type:'sensing_timer', message0:'таймер', colour:'#5CB1D6', output:'Number' },
+    { type:'sensing_score', message0:'очки', colour:'#5CB1D6', output:'Number' },
+
+    { type:'op_add', message0:'%1 + %2', args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'Number' },
+    { type:'op_sub', message0:'%1 − %2', args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'Number' },
+    { type:'op_mul', message0:'%1 × %2', args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'Number' },
+    { type:'op_div', message0:'%1 ÷ %2', args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'Number' },
+    { type:'op_lt', message0:'%1 < %2', args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'Boolean' },
+    { type:'op_gt', message0:'%1 > %2', args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'Boolean' },
+    { type:'op_eq', message0:'%1 = %2', args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'Boolean' },
+    { type:'op_and', message0:'%1 и %2', args0:[{type:'input_value',name:'A', check:'Boolean'},{type:'input_value',name:'B', check:'Boolean'}], colour:'#59C059', output:'Boolean' },
+    { type:'op_or',  message0:'%1 или %2', args0:[{type:'input_value',name:'A', check:'Boolean'},{type:'input_value',name:'B', check:'Boolean'}], colour:'#59C059', output:'Boolean' },
+    { type:'op_not', message0:'не %1', args0:[{type:'input_value',name:'A', check:'Boolean'}], colour:'#59C059', output:'Boolean' },
+    { type:'op_random', message0:'случайное от %1 до %2',
+      args0:[{type:'input_value',name:'A', check:'Number'},{type:'input_value',name:'B', check:'Number'}], colour:'#59C059', output:'Number' },
+    { type:'op_join', message0:'соединить %1 и %2',
+      args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'String' },
+
+    { type:'game_score', message0:'добавить %1 очков',
+      args0:[{type:'input_value', name:'N', check:'Number'}], colour:'#FF6680', previousStatement:null, nextStatement:null },
+    { type:'game_disappear', message0:'исчезнуть', colour:'#FF6680', previousStatement:null, nextStatement:null },
+  ]);
+
+  const J = Blockly.JavaScript;
+  if(!J || !J.forBlock) return;
+  const O = {
+    ATOMIC: J.ORDER_ATOMIC, NONE: J.ORDER_NONE,
+    ADD: J.ORDER_ADDITION, MUL: J.ORDER_MULTIPLICATION,
+    REL: J.ORDER_RELATIONAL, AND: J.ORDER_LOGICAL_AND, OR: J.ORDER_LOGICAL_OR,
+    NOT: J.ORDER_UNARY_NEGATION,
+  };
+  const V = (b, g, n, o) => { const c = g.valueToCode(b, n, o || O.NONE); return c || '0'; };
+  const hatWrap = (b, g) => {
+    const body = g.statementToCode(b, 'BODY') || '';
+    return `function*(api){\n${body}}\n`;
+  };
+  J.forBlock['event_flag']  = hatWrap;
+  J.forBlock['event_start'] = hatWrap;
+  J.forBlock['event_key']   = hatWrap;
+  J.forBlock['event_near']  = hatWrap;
+  J.forBlock['event_touch'] = hatWrap;
+  J.forBlock['control_forever'] = (b, g) => {
+    const body = g.statementToCode(b, 'BODY') || '';
+    return `while(true){\n${body}yield 0;\n}\n`;
+  };
+  J.forBlock['control_repeat'] = (b, g) => {
+    const n = V(b, g, 'N');
+    const body = g.statementToCode(b, 'BODY') || '';
+    return `{ const _n = Math.max(0, Math.floor(${n})); for(let _i=0;_i<_n;_i++){\n${body}yield 0;\n} }\n`;
+  };
+  J.forBlock['control_if'] = (b, g) => {
+    const c = V(b, g, 'COND');
+    const body = g.statementToCode(b, 'BODY') || '';
+    return `if(${c}){\n${body}}\n`;
+  };
+  J.forBlock['control_if_else'] = (b, g) => {
+    const c = V(b, g, 'COND');
+    const body = g.statementToCode(b, 'BODY') || '';
+    const els = g.statementToCode(b, 'ELSE') || '';
+    return `if(${c}){\n${body}} else {\n${els}}\n`;
+  };
+  J.forBlock['control_wait'] = (b, g) => `yield Math.max(0, ${V(b, g, 'N')});\n`;
+  J.forBlock['control_wait_until'] = (b, g) => {
+    const c = V(b, g, 'COND');
+    return `while(!(${c})){ yield 0; }\n`;
+  };
+  J.forBlock['motion_move']        = (b, g) => `api.move(${V(b, g, 'N')});\n`;
+  J.forBlock['motion_point_dir']   = (b, g) => `api.pointInDirection(${V(b, g, 'D')});\n`;
+  J.forBlock['motion_turn']        = (b, g) => `api.turn(${V(b, g, 'D')});\n`;
+  J.forBlock['motion_goto_xy']     = (b, g) => `api.gotoXY(${V(b, g, 'X')}, ${V(b, g, 'Y')});\n`;
+  J.forBlock['motion_change_x']    = (b, g) => `api.changeX(${V(b, g, 'N')});\n`;
+  J.forBlock['motion_change_y']    = (b, g) => `api.changeY(${V(b, g, 'N')});\n`;
+  J.forBlock['motion_change_z']    = (b, g) => `api.changeZ(${V(b, g, 'N')});\n`;
+  J.forBlock['motion_bounce']      = (b, g) => `api.bounce(${V(b, g, 'N')});\n`;
+  J.forBlock['motion_float']       = () => `api.setFloat(true);\n`;
+  J.forBlock['motion_unfloat']     = () => `api.setFloat(false);\n`;
+  J.forBlock['motion_spin']        = () => `api.spin();\n`;
+  J.forBlock['looks_say'] = (b, g) => {
+    const t = g.valueToCode(b, 'T', O.NONE) || '""';
+    return `api.say(${t});\n`;
+  };
+  J.forBlock['looks_change_size'] = (b, g) => `api.changeSize(${V(b, g, 'N')});\n`;
+  J.forBlock['looks_show']        = () => `api.show();\n`;
+  J.forBlock['looks_hide']        = () => `api.hide();\n`;
+  J.forBlock['looks_recolor']     = () => `api.recolor();\n`;
+  J.forBlock['sensing_keypressed'] = b => [`api.keyPressed(${JSON.stringify(b.getFieldValue('KEY'))})`, O.REL];
+  J.forBlock['sensing_near']       = () => ['api.nearPlayer()', O.REL];
+  J.forBlock['sensing_touch']      = () => ['api.touchingPlayer()', O.REL];
+  J.forBlock['sensing_dist']       = () => ['api.dist()', O.ATOMIC];
+  J.forBlock['sensing_pos']        = b => [`api.pos${b.getFieldValue('AXIS').toUpperCase()}()`, O.ATOMIC];
+  J.forBlock['sensing_timer']      = () => ['api.timer()', O.ATOMIC];
+  J.forBlock['sensing_score']      = () => ['api.score()', O.ATOMIC];
+  J.forBlock['op_add']    = (b, g) => [`(${V(b,g,'A')} + ${V(b,g,'B')})`, O.ADD];
+  J.forBlock['op_sub']    = (b, g) => [`(${V(b,g,'A')} - ${V(b,g,'B')})`, O.ADD];
+  J.forBlock['op_mul']    = (b, g) => [`(${V(b,g,'A')} * ${V(b,g,'B')})`, O.MUL];
+  J.forBlock['op_div']    = (b, g) => [`(${V(b,g,'A')} / (${V(b,g,'B')} || 1))`, O.MUL];
+  J.forBlock['op_lt']     = (b, g) => [`(${V(b,g,'A')} < ${V(b,g,'B')})`, O.REL];
+  J.forBlock['op_gt']     = (b, g) => [`(${V(b,g,'A')} > ${V(b,g,'B')})`, O.REL];
+  J.forBlock['op_eq']     = (b, g) => [`(${V(b,g,'A')} == ${V(b,g,'B')})`, O.REL];
+  J.forBlock['op_and']    = (b, g) => [`(${V(b,g,'A',O.AND)} && ${V(b,g,'B',O.AND)})`, O.AND];
+  J.forBlock['op_or']     = (b, g) => [`(${V(b,g,'A',O.OR)} || ${V(b,g,'B',O.OR)})`, O.OR];
+  J.forBlock['op_not']    = (b, g) => [`!(${V(b,g,'A',O.NOT)})`, O.NOT];
+  J.forBlock['op_random'] = (b, g) => [`api.rand(${V(b,g,'A')}, ${V(b,g,'B')})`, O.ATOMIC];
+  J.forBlock['op_join']   = (b, g) => [`(String(${V(b,g,'A')}) + String(${V(b,g,'B')}))`, O.ADD];
+  J.forBlock['game_score']     = (b, g) => `api.addScore(${V(b, g, 'N')});\n`;
+  J.forBlock['game_disappear'] = () => `api.disappear();\n`;
+  J.forBlock['variables_get'] = b => [`api.getVar(${JSON.stringify(b.getFieldValue('VAR'))})`, O.ATOMIC];
+  J.forBlock['variables_set'] = (b, g) => `api.setVar(${JSON.stringify(b.getFieldValue('VAR'))}, ${V(b,g,'VALUE',O.NONE)});\n`;
+  J.forBlock['math_change']   = (b, g) => `api.changeVar(${JSON.stringify(b.getFieldValue('VAR'))}, ${V(b,g,'DELTA',O.NONE)});\n`;
+}
+
+function makeToolbox(){
+  const numShadow = v => ({ shadow: { type:'math_number', fields:{ NUM: v } } });
+  const txtShadow = v => ({ shadow: { type:'text', fields:{ TEXT: v } } });
+  const keyShadow = k => ({ shadow: { type:'sensing_keypressed', fields:{ KEY: k } } });
+  return {
+    kind:'categoryToolbox',
+    contents:[
+      { kind:'category', name:'🏁 События', colour:'#FFBF00', contents:[
+        { kind:'block', type:'event_flag' },{ kind:'block', type:'event_key' },
+        { kind:'block', type:'event_near' },{ kind:'block', type:'event_touch' },
+      ]},
+      { kind:'category', name:'🎮 Управление', colour:'#FFAB19', contents:[
+        { kind:'block', type:'control_forever' },
+        { kind:'block', type:'control_repeat', inputs:{ N: numShadow(3) } },
+        { kind:'block', type:'control_if', inputs:{ COND: keyShadow('Space') } },
+        { kind:'block', type:'control_if_else', inputs:{ COND: keyShadow('Space') } },
+        { kind:'block', type:'control_wait', inputs:{ N: numShadow(0.5) } },
+        { kind:'block', type:'control_wait_until', inputs:{ COND: keyShadow('Space') } },
+      ]},
+      { kind:'category', name:'🏃 Движение', colour:'#4C97FF', contents:[
+        { kind:'block', type:'motion_move', inputs:{ N: numShadow(1) } },
+        { kind:'block', type:'motion_point_dir', inputs:{ D: numShadow(90) } },
+        { kind:'block', type:'motion_turn', inputs:{ D: numShadow(15) } },
+        { kind:'block', type:'motion_goto_xy', inputs:{ X: numShadow(0), Y: numShadow(0) } },
+        { kind:'block', type:'motion_change_x', inputs:{ N: numShadow(1) } },
+        { kind:'block', type:'motion_change_y', inputs:{ N: numShadow(1) } },
+        { kind:'block', type:'motion_change_z', inputs:{ N: numShadow(0.5) } },
+        { kind:'block', type:'motion_bounce', inputs:{ N: numShadow(6) } },
+        { kind:'block', type:'motion_float' },{ kind:'block', type:'motion_unfloat' },{ kind:'block', type:'motion_spin' },
+      ]},
+      { kind:'category', name:'🎨 Внешность', colour:'#9966FF', contents:[
+        { kind:'block', type:'looks_say', inputs:{ T: txtShadow('Привет!') } },
+        { kind:'block', type:'looks_change_size', inputs:{ N: numShadow(10) } },
+        { kind:'block', type:'looks_show' },{ kind:'block', type:'looks_hide' },{ kind:'block', type:'looks_recolor' },
+      ]},
+      { kind:'category', name:'👁 Сенсоры', colour:'#5CB1D6', contents:[
+        { kind:'block', type:'sensing_keypressed' },{ kind:'block', type:'sensing_near' },
+        { kind:'block', type:'sensing_touch' },{ kind:'block', type:'sensing_dist' },
+        { kind:'block', type:'sensing_pos' },{ kind:'block', type:'sensing_timer' },{ kind:'block', type:'sensing_score' },
+      ]},
+      { kind:'category', name:'➕ Операторы', colour:'#59C059', contents:[
+        { kind:'block', type:'op_add', inputs:{ A: numShadow(1), B: numShadow(1) } },
+        { kind:'block', type:'op_sub', inputs:{ A: numShadow(1), B: numShadow(1) } },
+        { kind:'block', type:'op_mul', inputs:{ A: numShadow(2), B: numShadow(2) } },
+        { kind:'block', type:'op_div', inputs:{ A: numShadow(10), B: numShadow(2) } },
+        { kind:'block', type:'op_lt', inputs:{ A: numShadow(1), B: numShadow(2) } },
+        { kind:'block', type:'op_gt', inputs:{ A: numShadow(2), B: numShadow(1) } },
+        { kind:'block', type:'op_eq', inputs:{ A: numShadow(1), B: numShadow(1) } },
+        { kind:'block', type:'op_and' },{ kind:'block', type:'op_or' },{ kind:'block', type:'op_not' },
+        { kind:'block', type:'op_random', inputs:{ A: numShadow(0), B: numShadow(10) } },
+        { kind:'block', type:'op_join' },
+      ]},
+      { kind:'category', name:'🎯 Игра', colour:'#FF6680', contents:[
+        { kind:'block', type:'game_score', inputs:{ N: numShadow(1) } },
+        { kind:'block', type:'game_disappear' },
+      ]},
+      { kind:'category', name:'📦 Переменные', colour:'#FF8C1A', custom:'VARIABLE' },
+    ]
+  };
+}
+
+let blocklyWs = null;
+let suppressWsChange = false;
+function initBlocklyWorkspace(){
+  if(typeof Blockly === 'undefined'){
+    const el = document.getElementById('blocklyDiv');
+    if(el) el.innerHTML = '<div class="blocklyEmptyState">⚠ Blockly не загрузился.</div>';
+    return;
+  }
+  try{
+    blocklyWs = Blockly.inject('blocklyDiv', {
+      toolbox: makeToolbox(),
+      renderer: 'zelos',
+      grid: { spacing: 22, length: 3, colour: '#1a2a44', snap: true },
+      zoom: { controls: true, wheel: true, startScale: 0.75, minScale: 0.4, maxScale: 1.6 },
+      trashcan: true, move: { scrollbars: true, drag: true, wheel: false }, sounds: false,
+    });
+    blocklyWs.addChangeListener(onWorkspaceChange);
+    window.addEventListener('resize', () => { try { Blockly.svgResize(blocklyWs); } catch(_){} });
+  }catch(e){ console.warn('Blockly init failed', e); }
+}
+function onWorkspaceChange(ev){
+  if(suppressWsChange) return;
+  if(!selected) return;
+  if(ev && ev.isUiEvent) return;
+  saveSelectedXml(); updateBlocksCount();
+}
+function saveSelectedXml(){
+  if(!selected || !blocklyWs) return;
+  try{
+    const dom = Blockly.Xml.workspaceToDom(blocklyWs);
+    selected.userData.blocklyXml = Blockly.Xml.domToText(dom);
+  }catch(e){}
+}
+function loadObjectXml(obj){
+  if(!blocklyWs) return;
+  suppressWsChange = true;
+  try{
+    blocklyWs.clear();
+    if(obj && obj.userData.blocklyXml){
+      const dom = Blockly.utils.xml.textToDom(obj.userData.blocklyXml);
+      Blockly.Xml.domToWorkspace(dom, blocklyWs);
+    }
+  }catch(e){ console.warn('loadObjectXml', e); }
+  suppressWsChange = false;
+  updateBlocksCount();
+}
+function updateBlocksCount(){
+  if(!blocklyWs) return;
+  try{
+    const n = blocklyWs.getTopBlocks(false).length;
+    const total = blocklyWs.getAllBlocks(false).length;
+    const el = $('blocksCount');
+    if(el) el.textContent = n ? `${n} скрипт(ов) · ${total} блок(ов)` : 'пусто';
+  }catch(e){}
+}
+function compileWorkspaceToScripts(ws){
+  const out = { flag: [], near: [], touch: [], key: {} };
+  const top = ws.getTopBlocks(true);
+  const J = Blockly.JavaScript;
+  for(const b of top){
+    let code = null;
+    try{ code = J.blockToCode(b); }catch(e){ console.warn('gen', b.type, e); continue; }
+    if(typeof code !== 'string' || !code.trim()) continue;
+    if(b.type === 'event_flag' || b.type === 'event_start') out.flag.push(code);
+    else if(b.type === 'event_key'){
+      const k = b.getFieldValue('KEY');
+      (out.key[k] = out.key[k] || []).push(code);
+    }
+    else if(b.type === 'event_near') out.near.push(code);
+    else if(b.type === 'event_touch') out.touch.push(code);
+  }
+  return out;
+}
+function buildProgramFromXml(xml){
+  if(typeof Blockly === 'undefined') return null;
+  const ws = new Blockly.Workspace();
+  try{
+    const dom = Blockly.utils.xml.textToDom(xml);
+    Blockly.Xml.domToWorkspace(dom, ws);
+    const sc = compileWorkspaceToScripts(ws);
+    const parts = [];
+    parts.push('return {');
+    parts.push('flag:[' + sc.flag.map(s => `(${s})`).join(',') + '],');
+    parts.push('near:[' + sc.near.map(s => `(${s})`).join(',') + '],');
+    parts.push('touch:[' + sc.touch.map(s => `(${s})`).join(',') + '],');
+    parts.push('key:{' + Object.keys(sc.key).map(k =>
+      JSON.stringify(k) + ':[' + sc.key[k].map(s => `(${s})`).join(',') + ']'
+    ).join(',') + '}');
+    parts.push('};');
+    const factory = new Function(parts.join('\n'));
+    return factory();
+  }catch(e){ console.warn('buildProgramFromXml', e); return null; }
+  finally { ws.dispose(); }
+}
+function makeRunner(genFn, api){
+  let it;
+  try{ it = genFn(api); }catch(e){ console.warn(e); return null; }
+  return { it, wait: 0, done: false };
+}
+function stepRunner(r, dt){
+  if(!r || r.done) return;
+  if(r.wait > 0){ r.wait -= dt; if(r.wait > 0) return; }
+  let res;
+  try{ res = r.it.next(); }
+  catch(e){ console.warn('runtime', e); r.done = true; return; }
+  if(res.done){ r.done = true; return; }
+  r.wait = (typeof res.value === 'number' && res.value > 0) ? res.value : 0;
+}
+function makeApi(obj, rt){
+  return {
+    move(n){
+      n = Number(n) || 0;
+      if(dimension === '2d'){ const f = obj.userData._faceX || 1; obj.position.x += f * n; }
+      else { obj.position.x += Math.sin(obj.rotation.y) * n; obj.position.z += Math.cos(obj.rotation.y) * n; }
+      obj.position.x = Math.max(-100, Math.min(100, obj.position.x));
+      if(dimension === '3d') obj.position.z = Math.max(-100, Math.min(100, obj.position.z));
+    },
+    pointInDirection(d){
+      d = Number(d) || 0;
+      if(dimension === '2d'){
+        const rad = d * Math.PI / 180;
+        const f = Math.cos(rad) >= 0 ? 1 : -1;
+        obj.userData._faceX = f;
+        obj.rotation.y = f > 0 ? Math.PI/2 : -Math.PI/2;
+      } else obj.rotation.y = d * Math.PI / 180;
+    },
+    turn(d){
+      d = Number(d) || 0;
+      obj.rotation.y += d * Math.PI / 180;
+      if(dimension === '2d') obj.userData._faceX = Math.cos(obj.rotation.y - Math.PI/2) >= 0 ? 1 : -1;
+    },
+    gotoXY(x, y){
+      obj.position.x = Number(x) || 0;
+      if(dimension === '2d') obj.position.y = Math.max(0, Number(y) || 0);
+      else obj.position.z = Number(y) || 0;
+    },
+    changeX(n){ obj.position.x += Number(n) || 0; },
+    changeY(n){
+      const v = Number(n) || 0;
+      if(dimension === '2d') obj.position.y = Math.max(0, obj.position.y + v);
+      else obj.position.z += v;
+    },
+    changeZ(n){ obj.position.y = Math.max(0, obj.position.y + (Number(n) || 0)); obj.userData._floating = false; },
+    bounce(n){ obj.userData.vy = Number(n) || 6; obj.userData._floating = false; },
+    setFloat(v){ obj.userData._floating = !!v; if(v) obj.userData._floatBase = obj.position.y; },
+    spin(){ obj.rotation.y += 0.08; },
+    say(t){ rt.sayUntil = 2.2; showSaySprite(obj, String(t == null ? '' : t)); },
+    changeSize(p){
+      const k = 1 + (Number(p) || 0) / 100;
+      obj.scale.multiplyScalar(k);
+      obj.scale.x = Math.max(0.05, Math.min(8, obj.scale.x));
+      obj.scale.y = Math.max(0.05, Math.min(8, obj.scale.y));
+      obj.scale.z = Math.max(0.05, Math.min(8, obj.scale.z));
+    },
+    show(){ obj.visible = true; obj.userData.dead = false; },
+    hide(){ obj.visible = false; },
+    recolor(){
+      const h = Math.random();
+      obj.traverse(o => { if(o.isMesh){ o.material.color.setHSL(h, .72, .58); if(o.material.emissive) o.material.emissive.setHSL(h, .8, .2); }});
+    },
+    keyPressed(k){ return !!keys[k]; },
+    nearPlayer(){ const p = objects.find(isPlayer); return !!(p && distActive(obj, p) < 2.3); },
+    touchingPlayer(){ const p = objects.find(isPlayer); return !!(p && distActive(obj, p) < 1.25); },
+    dist(){ const p = objects.find(isPlayer); return p ? distActive(obj, p) : 9999; },
+    posX(){ return obj.position.x; },
+    posY(){ return dimension === '2d' ? obj.position.y : obj.position.z; },
+    posZ(){ return obj.position.y; },
+    timer(){ return raceTime; },
+    score(){ return score; },
+    addScore(n){ score += (Number(n) || 0); updateScore(); },
+    disappear(){
+      obj.userData.dead = true; obj.visible = false;
+      if(obj.userData.zoneMesh) obj.userData.zoneMesh.visible = false;
+      if(obj.userData.zoneFill) obj.userData.zoneFill.visible = false;
+    },
+    setVar(name, v){ rt.vars[name] = v; },
+    changeVar(name, v){ rt.vars[name] = (Number(rt.vars[name]) || 0) + (Number(v) || 0); },
+    getVar(name){ return rt.vars[name] || 0; },
+    rand(a, b){ a = Number(a) || 0; b = Number(b) || 0; return a + Math.random() * (b - a); },
+  };
+}
+function initRuntimeState(obj){
+  obj.userData._rt = { flag: [], near: [], touch: [], key: {}, lastKeys: {}, vars: {},
+    saySprite: null, sayUntil: 0, started: false, prevNear: false, prevTouch: false };
+}
+function runObjectScripts(obj, dt){
+  if(!obj.userData || obj.userData.dead) return;
+  const prog = obj.userData._prog, rt = obj.userData._rt;
+  if(!prog || !rt) return;
+  const api = makeApi(obj, rt);
+  if(!rt.started){
+    rt.started = true;
+    for(const g of prog.flag){ const r = makeRunner(g, api); if(r) rt.flag.push(r); }
+  }
+  const p = objects.find(isPlayer);
+  const nearNow = !!(p && distActive(obj, p) < 2.3);
+  if(nearNow && !rt.prevNear){
+    for(const g of prog.near){ const r = makeRunner(g, api); if(r) rt.near.push(r); }
+  }
+  rt.prevNear = nearNow;
+  const touchNow = !!(p && distActive(obj, p) < 1.25);
+  if(touchNow && !rt.prevTouch){
+    for(const g of prog.touch){ const r = makeRunner(g, api); if(r) rt.touch.push(r); }
+  }
+  rt.prevTouch = touchNow;
+  for(const k in prog.key){
+    const pressed = !!keys[k];
+    if(pressed && !rt.lastKeys[k]){
+      rt.key[k] = rt.key[k] || [];
+      for(const g of prog.key[k]){ const r = makeRunner(g, api); if(r) rt.key[k].push(r); }
+    }
+    rt.lastKeys[k] = pressed;
+  }
+  for(let i = rt.flag.length - 1; i >= 0; i--){ stepRunner(rt.flag[i], dt); if(rt.flag[i].done) rt.flag.splice(i,1); }
+  for(let i = rt.near.length - 1; i >= 0; i--){ stepRunner(rt.near[i], dt); if(rt.near[i].done) rt.near.splice(i,1); }
+  for(let i = rt.touch.length - 1; i >= 0; i--){ stepRunner(rt.touch[i], dt); if(rt.touch[i].done) rt.touch.splice(i,1); }
+  for(const k in rt.key){
+    const list = rt.key[k]; if(!list) continue;
+    for(let i = list.length - 1; i >= 0; i--){ stepRunner(list[i], dt); if(list[i].done) list.splice(i,1); }
+  }
+  if(rt.sayUntil > 0){
+    rt.sayUntil -= dt;
+    if(rt.sayUntil <= 0 && rt.saySprite){
+      scene.remove(rt.saySprite);
+      if(rt.saySprite.material){
+        if(rt.saySprite.material.map) rt.saySprite.material.map.dispose();
+        rt.saySprite.material.dispose();
+      }
+      rt.saySprite = null;
+    }
+  }
+  if(rt.saySprite) rt.saySprite.position.set(obj.position.x, obj.position.y + 2.5, obj.position.z);
+}
+function makeTextSprite(text){
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 128;
+  const ctx = c.getContext('2d');
+  const r = 22, x = 8, y = 8, w = 496, h = 112;
+  ctx.fillStyle = 'rgba(255,255,255,0.96)';
+  ctx.beginPath();
+  ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(240, y+h-1); ctx.lineTo(272, y+h-1); ctx.lineTo(256, y+h+22); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#0f1a2e'; ctx.font = 'bold 46px Inter, Arial, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const clipped = text.length > 22 ? text.slice(0, 21) + '…' : text;
+  ctx.fillText(clipped, 256, 64);
+  const tex = new THREE.CanvasTexture(c); tex.anisotropy = 4;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
+  const sp = new THREE.Sprite(mat);
+  sp.scale.set(2.6, 0.65, 1); sp.renderOrder = 999;
+  return sp;
+}
+function showSaySprite(obj, text){
+  const rt = obj.userData._rt; if(!rt) return;
+  if(rt.saySprite){
+    scene.remove(rt.saySprite);
+    if(rt.saySprite.material){
+      if(rt.saySprite.material.map) rt.saySprite.material.map.dispose();
+      rt.saySprite.material.dispose();
+    }
+    rt.saySprite = null;
+  }
+  const sp = makeTextSprite(text);
+  sp.position.set(obj.position.x, obj.position.y + 2.5, obj.position.z);
+  scene.add(sp); rt.saySprite = sp;
+}
+
+/* =============================================================
+   THREE.JS
+============================================================= */
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const camera3D = new THREE.PerspectiveCamera(55, 1, 0.1, 500);
+camera3D.position.set(14, 12, 14); camera3D.lookAt(0, 1, 0);
+const camera2D = new THREE.OrthographicCamera(-10, 10, 8, -8, -500, 500);
+camera2D.position.set(0, 4, 40); camera2D.lookAt(0, 4, 0);
+let activeCamera = camera3D;
+let dimension = '3d';
+
+const controls = new OrbitControls(camera3D, renderer.domElement);
+controls.target.set(0, 1, 0);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 2; controls.maxDistance = 150;
+controls.zoomSpeed = 1.1;
+controls.maxPolarAngle = Math.PI / 2 - 0.02;
+
+const group3D = new THREE.Group();
+const group2D = new THREE.Group();
+scene.add(group3D, group2D);
+group2D.visible = false;
+
+const undergroundSettings = { depth: 6, texture: 'none' };
+let undergroundMesh = null;
+let undergroundSrcTex = null;
+function createUnderground(){
+  if(undergroundMesh) return;
+  undergroundMesh = new THREE.Mesh(new THREE.PlaneGeometry(500, 1), new THREE.MeshBasicMaterial({ color: 0x0a0a0a }));
+  undergroundMesh.position.set(0, -0.5, -1);
+  undergroundMesh.renderOrder = -10;
+  scene.add(undergroundMesh); updateUnderground();
+}
+function updateUnderground(){
+  if(!undergroundMesh) return;
+  const d = undergroundSettings.depth;
+  undergroundMesh.geometry.dispose();
+  undergroundMesh.geometry = new THREE.PlaneGeometry(500, d);
+  undergroundMesh.position.set(0, -d/2 - 0.01, -1);
+  let srcTex = null;
+  if(undergroundSettings.texture && undergroundSettings.texture.startsWith('user:'))
+    srcTex = userTextures[undergroundSettings.texture.slice(5)] || null;
+  else if(undergroundSettings.texture !== 'none') srcTex = getTexture(undergroundSettings.texture);
+  if(srcTex){
+    if(undergroundSrcTex !== srcTex){
+      if(undergroundMesh.material.map){ undergroundMesh.material.map.dispose(); undergroundMesh.material.map = null; }
+      const tex = srcTex.clone(); tex.needsUpdate = true;
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      undergroundMesh.material.map = tex; undergroundSrcTex = srcTex;
+    }
+    if(undergroundMesh.material.map) undergroundMesh.material.map.repeat.set(60, Math.max(1, d/1.5));
+    undergroundMesh.material.color.setHex(0xffffff);
+  } else {
+    if(undergroundMesh.material.map){ undergroundMesh.material.map.dispose(); undergroundMesh.material.map = null; }
+    undergroundSrcTex = null; undergroundMesh.material.color.setHex(0x0a0a0a);
+  }
+  undergroundMesh.material.needsUpdate = true;
+}
+
+const objectsByDim = { '3d': [], '2d': [] };
+let objects = objectsByDim['3d'];
+function getActiveGroup(){ return dimension === '3d' ? group3D : group2D; }
+
+const VIEW_2D_BASE_HEIGHT = 15, VIEW_2D_CENTER_Y = 4;
+let cam2DZoom = 1;
+function updateCamera2DFrustum(){
+  const w = viewport.clientWidth, h = viewport.clientHeight;
+  if(!w || !h) return;
+  const aspect = w / h;
+  const halfH = (VIEW_2D_BASE_HEIGHT / cam2DZoom) / 2;
+  const halfW = halfH * aspect;
+  camera2D.left = -halfW; camera2D.right = halfW;
+  camera2D.top = halfH; camera2D.bottom = -halfH;
+  camera2D.updateProjectionMatrix();
+  if(zoomVal) zoomVal.textContent = Math.round(cam2DZoom * 100) + '%';
+}
+function set2DZoom(z){ cam2DZoom = Math.max(0.15, Math.min(6, z)); updateCamera2DFrustum(); }
+function resize(){
+  const w = viewport.clientWidth, h = viewport.clientHeight;
+  if(!w || !h) return;
+  renderer.setSize(w, h, false);
+  camera3D.aspect = w / h; camera3D.updateProjectionMatrix();
+  updateCamera2DFrustum();
+  if(typeof Blockly !== 'undefined' && blocklyWs){ try{ Blockly.svgResize(blocklyWs); }catch(_){} }
+}
+let _lastVpW = 0, _lastVpH = 0;
+function ensureResize(){
+  const w = viewport.clientWidth, h = viewport.clientHeight;
+  if(!w || !h) return;
+  if(w === _lastVpW && h === _lastVpH) return;
+  _lastVpW = w; _lastVpH = h; resize();
+}
+new ResizeObserver(() => ensureResize()).observe(viewport);
+window.addEventListener('resize', ensureResize);
+
+scene.add(new THREE.HemisphereLight(0x8fc4ff, 0x0a1020, 1.1));
+const sun = new THREE.DirectionalLight(0xffffff, 2.0);
+sun.position.set(10, 22, 8);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -60; sun.shadow.camera.right = 60;
+sun.shadow.camera.top = 60; sun.shadow.camera.bottom = -60;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 80;
+sun.shadow.bias = -0.0006;
+scene.add(sun);
+const rim = new THREE.DirectionalLight(0x8b5cf6, 0.6);
+rim.position.set(-12, 8, -10); scene.add(rim);
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x1a2a44, roughness: 0.97 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+const grid = new THREE.GridHelper(300, 150, 0x2c4266, 0x18263d);
+grid.position.y = 0.015; grid.material.transparent = true; grid.material.opacity = 0.7; scene.add(grid);
+
+const BACKGROUNDS = {
+  night:  { name:'Ночь',    top:'#0a1228', bot:'#050a13', scene:'#070c16', ground:'#1a2a44' },
+  day:    { name:'День',    top:'#5c94fc', bot:'#a7d3ff', scene:'#5c94fc', ground:'#4a9f3e' },
+  sunset: { name:'Закат',   top:'#ff6b6b', bot:'#ffb347', scene:'#c25d3d', ground:'#5a3a2e' },
+  forest: { name:'Лес',     top:'#1a4d2e', bot:'#4a9f5e', scene:'#2d5a3d', ground:'#2a4a2e' },
+  space:  { name:'Космос',  top:'#000000', bot:'#1a0033', scene:'#05030f', ground:'#1a1a2e' },
+  ocean:  { name:'Океан',   top:'#1e40af', bot:'#0891b2', scene:'#0e4b6e', ground:'#2d4a5a' },
+  purple: { name:'Фиолет',  top:'#4c1d95', bot:'#a855f7', scene:'#2e1065', ground:'#3d2a5c' },
+  pink:   { name:'Розовый', top:'#f472b6', bot:'#fbcfe8', scene:'#db2777', ground:'#7a3b5a' },
+};
+let currentBg = 'night';
+function applyBackground(id){
+  const bg = BACKGROUNDS[id] || BACKGROUNDS.night;
+  currentBg = id;
+  sky2d.style.background = `linear-gradient(180deg, ${bg.top} 0%, ${bg.bot} 100%)`;
+  if(dimension === '3d'){
+    scene.background = new THREE.Color(bg.scene);
+    scene.fog = new THREE.Fog(bg.scene, 60, 160);
+    ground.material.color.set(bg.ground);
+  } else { scene.background = null; scene.fog = null; }
+  document.querySelectorAll('.bg-chip').forEach(el => el.classList.toggle('active', el.dataset.bg === id));
+}
+
+const PROCEDURAL = {
+  none: null,
+  checker(ctx,s){ const c=s/8; for(let y=0;y<8;y++)for(let x=0;x<8;x++){ctx.fillStyle=(x+y)%2?'#1f2937':'#e2e8f0';ctx.fillRect(x*c,y*c,c,c);}},
+  stripes(ctx,s){ ctx.fillStyle='#fbbf24';ctx.fillRect(0,0,s,s);ctx.fillStyle='#1f2937';const w=s/10;
+    for(let i=-10;i<20;i++){ctx.save();ctx.translate(i*w*2,0);ctx.rotate(Math.PI/4);ctx.fillRect(0,-s,w,s*3);ctx.restore();}},
+  bricks(ctx,s){ ctx.fillStyle='#7c2d12';ctx.fillRect(0,0,s,s);const bh=s/6,bw=s/3;ctx.fillStyle='#b45309';
+    for(let r=0;r<6;r++){const o=(r%2)*bw/2;for(let c=-1;c<4;c++)ctx.fillRect(c*bw+o+2,r*bh+2,bw-4,bh-4);}},
+  wood(ctx,s){ ctx.fillStyle='#8b5a2b';ctx.fillRect(0,0,s,s);ctx.strokeStyle='#5c3a1a';ctx.lineWidth=2;
+    for(let i=0;i<30;i++){ctx.beginPath();const x=i*(s/30);ctx.moveTo(x,0);
+      for(let y=0;y<s;y+=8)ctx.lineTo(x+Math.sin(y*.3+i)*3,y);ctx.stroke();}},
+  grass(ctx,s){ ctx.fillStyle='#22c55e';ctx.fillRect(0,0,s,s);ctx.strokeStyle='#15803d';ctx.lineWidth=2;
+    for(let i=0;i<60;i++){const x=Math.random()*s,y=Math.random()*s;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(Math.random()-.5)*6,y-8);ctx.stroke();}},
+  stone(ctx,s){ ctx.fillStyle='#64748b';ctx.fillRect(0,0,s,s);
+    for(let i=0;i<200;i++){const g=60+Math.random()*100;ctx.fillStyle=`rgb(${g},${g},${g})`;ctx.fillRect(Math.random()*s,Math.random()*s,4,4);}},
+  rainbow(ctx,s){ const g=ctx.createLinearGradient(0,0,s,s);g.addColorStop(0,'#ef4444');g.addColorStop(.2,'#f97316');
+    g.addColorStop(.4,'#fbbf24');g.addColorStop(.6,'#22c55e');g.addColorStop(.8,'#3b82f6');g.addColorStop(1,'#a855f7');
+    ctx.fillStyle=g;ctx.fillRect(0,0,s,s);},
+  grid(ctx,s){ ctx.fillStyle='#0a1424';ctx.fillRect(0,0,s,s);ctx.strokeStyle='#22d3ee';ctx.lineWidth=2;const st=s/8;
+    for(let i=0;i<=8;i++){ctx.beginPath();ctx.moveTo(i*st,0);ctx.lineTo(i*st,s);ctx.moveTo(0,i*st);ctx.lineTo(s,i*st);ctx.stroke();}},
+  dots(ctx,s){ ctx.fillStyle='#1e1b4b';ctx.fillRect(0,0,s,s);ctx.fillStyle='#f472b6';const st=s/6;
+    for(let y=0;y<6;y++)for(let x=0;x<6;x++){ctx.beginPath();ctx.arc((x+.5)*st,(y+.5)*st,st*.22,0,Math.PI*2);ctx.fill();}},
+  lava(ctx,s){ ctx.fillStyle='#7c2d12';ctx.fillRect(0,0,s,s);
+    for(let i=0;i<40;i++){ctx.fillStyle=`rgba(251,${100+Math.random()*100|0},20,${.5+Math.random()*.5})`;
+      ctx.beginPath();ctx.arc(Math.random()*s,Math.random()*s,8+Math.random()*22,0,Math.PI*2);ctx.fill();}},
+  soil(ctx,s){ ctx.fillStyle='#3a2418';ctx.fillRect(0,0,s,s);
+    for(let i=0;i<80;i++){const r=60+Math.random()*40;const g=30+Math.random()*30;const b=15+Math.random()*20;
+      ctx.fillStyle=`rgb(${r|0},${g|0},${b|0})`;ctx.fillRect(Math.random()*s,Math.random()*s,6,6);}},
+};
+const textureCache = {};
+const userTextures = {};
+function getTexture(type){
+  if(type === 'none') return null;
+  if(textureCache[type]) return textureCache[type];
+  const maker = PROCEDURAL[type]; if(!maker) return null;
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  maker(c.getContext('2d'), 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.anisotropy = 4;
+  textureCache[type] = tex; return tex;
+}
+const thumbCache = {};
+function makeTextureThumb(type){
+  if(thumbCache[type]) return thumbCache[type];
+  const c = document.createElement('canvas'); c.width = c.height = 48;
+  if(type !== 'none'){ const m = PROCEDURAL[type]; if(m) m(c.getContext('2d'), 48); }
+  thumbCache[type] = c;
+  return c;
+}
+function applyTextureToObject(obj, type){
+  obj.userData.texture = type;
+  let tex = null;
+  if(type && type.startsWith('user:')) tex = userTextures[type.slice(5)] || null;
+  else tex = getTexture(type);
+  obj.traverse(o => { if(o.isMesh){ o.material.map = tex || null; o.material.needsUpdate = true; } });
+}
+function createRoundedBoxGeometry(w, h, d, r, seg = 3){
+  const geo = new THREE.BoxGeometry(w, h, d, seg, seg, seg);
+  const pos = geo.attributes.position, v = new THREE.Vector3();
+  const hw = w/2, hh = h/2, hd = d/2;
+  const rr = Math.min(r, hw*.99, hh*.99, hd*.99);
+  if(rr < 0.01) return geo;
+  const cx = hw - rr, cy = hh - rr, cz = hd - rr;
+  for(let i = 0; i < pos.count; i++){
+    v.fromBufferAttribute(pos, i);
+    const nx = Math.max(-cx, Math.min(cx, v.x));
+    const ny = Math.max(-cy, Math.min(cy, v.y));
+    const nz = Math.max(-cz, Math.min(cz, v.z));
+    const dx = v.x - nx, dy = v.y - ny, dz = v.z - nz;
+    const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    if(len > 1e-4){ v.set(nx+dx/len*rr, ny+dy/len*rr, nz+dz/len*rr); pos.setXYZ(i, v.x, v.y, v.z); }
+  }
+  geo.computeVertexNormals(); return geo;
+}
+
+const std = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.55, metalness: 0.08, ...o });
+const PALETTE = [
+  { type:'player', name:'Робот', icon:'🤖', solid:false },
+  { type:'finish', name:'Финиш', icon:'🏁', solid:false, finish:true },
+  { type:'heart',  name:'Сердечко', icon:'❤️', solid:false, heart:true },
+  { type:'coin',   name:'VolCoin', icon:'🪙', solid:false },
+  { type:'enemy',  name:'Враг',  icon:'👹', solid:true, enemy:true },
+  { type:'cube',   name:'Куб',   icon:'🟦', solid:true },
+  { type:'sphere', name:'Сфера', icon:'🔴', solid:true },
+  { type:'cylinder', name:'Цилиндр', icon:'🟨', solid:true },
+  { type:'cone',   name:'Конус', icon:'🔺', solid:true },
+  { type:'capsule', name:'Капсула', icon:'💊', solid:true },
+  { type:'torus',  name:'Тор',   icon:'🍩', solid:true },
+  { type:'octahedron', name:'Октаэдр', icon:'💎', solid:true },
+  { type:'tetrahedron', name:'Тетраэдр', icon:'🔻', solid:true },
+  { type:'icosahedron', name:'Икосаэдр', icon:'🎲', solid:true },
+  { type:'torusKnot', name:'Узел', icon:'🌀', solid:true },
+  { type:'wall',   name:'Стена', icon:'🧱', solid:true },
+  { type:'ramp',   name:'Склон', icon:'📐', solid:true },
+  { type:'platform', name:'Платформа', icon:'⬜', solid:true },
+  { type:'ring',   name:'Кольцо', icon:'⭕', solid:true },
+  { type:'tree',   name:'Дерево', icon:'🌳', solid:true },
+  { type:'rock',   name:'Камень', icon:'🪨', solid:true },
+  { type:'water',    name:'Вода',   icon:'💧', solid:false, water:true },
+  { type:'lava',     name:'Лава',   icon:'🔥', solid:false, hazard:true, lava:true },
+  { type:'cloud',    name:'Облако', icon:'☁️', solid:false, cloud:true },
+  { type:'mountain', name:'Гора',   icon:'⛰️', solid:true, mountain:true },
+];
+function makePart(geometry, material, uiX, uiY, uiZ){
+  const m = new THREE.Mesh(geometry, material);
+  m.position.set(uiX, uiZ, uiY);
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+function createObject(type){
+  const g = new THREE.Group();
+  const put = (geo, mat, x, y, z) => { const m = makePart(geo, mat, x, y, z); g.add(m); return m; };
+  switch(type){
+    case 'player': {
+      put(new THREE.CapsuleGeometry(0.32, 0.5, 6, 16), std(0x8b5cf6), 0, 0, 0.78);
+      put(new THREE.BoxGeometry(0.5, 0.42, 0.5), std(0xe2e8f0), 0, 0, 1.34);
+      put(new THREE.BoxGeometry(0.42, 0.15, 0.06), std(0x22d3ee, { emissive:0x0891b2, emissiveIntensity:0.9 }), 0, 0.26, 1.36);
+      put(new THREE.BoxGeometry(0.18, 0.34, 0.18), std(0x6d28d9), -0.42, 0, 0.95);
+      put(new THREE.BoxGeometry(0.18, 0.34, 0.18), std(0x6d28d9),  0.42, 0, 0.95);
+      put(new THREE.BoxGeometry(0.12, 0.12, 0.42), std(0x334155), 0.35, 0.32, 0.95);
+      const tip = put(new THREE.CylinderGeometry(0.055, 0.055, 0.22, 10), std(0x0ea5e9, { emissive:0x0ea5e9, emissiveIntensity:0.7 }), 0.35, 0.6, 0.95);
+      tip.rotation.x = Math.PI / 2;
+      g.userData.isPlayer = true; break;
+    }
+    case 'finish': {
+      put(new THREE.CylinderGeometry(0.06, 0.08, 3.2, 12), std(0xcbd5e1, { metalness:0.7, roughness:0.35 }), 0, 0, 1.6);
+      const colors = [0x22c55e, 0x16a34a, 0x15803d, 0x166534, 0x14532d];
+      for(let i = 0; i < 5; i++)
+        put(new THREE.BoxGeometry(1.3, 0.22, 0.02), std(colors[i], { emissive:colors[i], emissiveIntensity:0.35 }), 0.68, 0, 2.7 - i*0.22);
+      const base = put(new THREE.TorusGeometry(1.4, 0.09, 10, 40), std(0xfbbf24, { emissive:0xfbbf24, emissiveIntensity:0.8, metalness:0.7, roughness:0.25 }), 0, 0, 0.08);
+      base.rotation.x = Math.PI / 2;
+      put(new THREE.CylinderGeometry(1.2, 1.4, 6, 20, 1, true), new THREE.MeshBasicMaterial({ color:0x22c55e, transparent:true, opacity:0.12, side:THREE.DoubleSide, depthWrite:false }), 0, 0, 3.0);
+      g.userData.isFinish = true; break;
+    }
+    case 'heart': {
+      const mat = std(0xec4899, { emissive:0xbe185d, emissiveIntensity:0.55, roughness:0.4 });
+      put(new THREE.SphereGeometry(0.32, 20, 16), mat, -0.22, 0, 0.75);
+      put(new THREE.SphereGeometry(0.32, 20, 16), mat,  0.22, 0, 0.75);
+      const b = put(new THREE.BoxGeometry(0.62, 0.3, 0.62), mat, 0, 0, 0.5);
+      b.rotation.z = Math.PI / 4;
+      const c = put(new THREE.ConeGeometry(0.42, 0.55, 4), mat, 0, 0, 0.15);
+      c.rotation.y = Math.PI / 4;
+      g.userData.isHeart = true; break;
+    }
+    case 'coin': {
+      const m = std(0xfacc15, { emissive:0xfbbf24, emissiveIntensity:0.55, metalness:0.75, roughness:0.25 });
+      const mesh = put(new THREE.CylinderGeometry(0.32, 0.32, 0.09, 24), m, 0, 0, 0.72);
+      if (dimension === '2d') mesh.rotation.set(Math.PI / 2, 0, 0);
+      else mesh.rotation.set(0, 0, Math.PI / 2);
+      g.userData.isCoin = true; break;
+    }
+    case 'enemy': {
+      put(new THREE.CapsuleGeometry(0.34, 0.52, 6, 16), std(0xb91c1c), 0, 0, 0.8);
+      put(new THREE.BoxGeometry(0.52, 0.44, 0.52), std(0x1f2937), 0, 0, 1.38);
+      put(new THREE.BoxGeometry(0.44, 0.12, 0.06), std(0xff0000, { emissive:0xff0000, emissiveIntensity:1.6 }), 0, 0.27, 1.40);
+      put(new THREE.BoxGeometry(0.2, 0.36, 0.2), std(0x7f1d1d), -0.45, 0, 0.95);
+      put(new THREE.BoxGeometry(0.2, 0.36, 0.2), std(0x7f1d1d),  0.45, 0, 0.95);
+      put(new THREE.BoxGeometry(0.16, 0.16, 0.5), std(0x374151), 0.45, 0.35, 0.9);
+      g.userData.isEnemy = true; break;
+    }
+    case 'cube':     put(createRoundedBoxGeometry(1, 1, 1, 0), std(0x38bdf8), 0, 0, 0.5); break;
+    case 'wall':     put(createRoundedBoxGeometry(2.5, 2.5, 0.3, 0), std(0x94a3b8), 0, 0, 1.25); break;
+    case 'ramp': {
+      const mesh = put(createRoundedBoxGeometry(2.5, 3, 0.4, 0), std(0x64748b), 0, 0, 0.2);
+      g.userData.isRamp = true; g.userData.rampMesh = mesh; break;
+    }
+    case 'sphere':   put(new THREE.SphereGeometry(0.6, 32, 24), std(0xf472b6), 0, 0, 0.6); break;
+    case 'cylinder': put(new THREE.CylinderGeometry(0.5, 0.5, 1.2, 24), std(0xfbbf24), 0, 0, 0.6); break;
+    case 'cone':     put(new THREE.ConeGeometry(0.55, 1.3, 24), std(0x34d399), 0, 0, 0.65); break;
+    case 'capsule':  put(new THREE.CapsuleGeometry(0.4, 0.8, 8, 16), std(0x60a5fa), 0, 0, 0.8); break;
+    case 'torus': {
+      const t = put(new THREE.TorusGeometry(0.7, 0.25, 14, 32), std(0xf59e0b), 0, 0, 0.7);
+      t.rotation.x = Math.PI / 2; break;
+    }
+    case 'octahedron': put(new THREE.OctahedronGeometry(0.7, 0), std(0x22d3ee, { flatShading:true }), 0, 0, 0.7); break;
+    case 'tetrahedron': put(new THREE.TetrahedronGeometry(0.8, 0), std(0xa3e635, { flatShading:true }), 0, 0, 0.7); break;
+    case 'icosahedron': put(new THREE.IcosahedronGeometry(0.7, 0), std(0xf43f5e, { flatShading:true }), 0, 0, 0.7); break;
+    case 'torusKnot': put(new THREE.TorusKnotGeometry(0.5, 0.16, 64, 12), std(0xa855f7, { metalness:0.5, roughness:0.35 }), 0, 0, 0.8); break;
+    case 'platform': put(createRoundedBoxGeometry(3.2, 3.2, 0.44, 0), std(0x64748b), 0, 0, 0.22); break;
+    case 'ring': {
+      const r = put(new THREE.TorusGeometry(1.0, 0.14, 12, 36), std(0xf97316, { emissive:0x7c2d12, emissiveIntensity:0.5 }), 0, 0, 1.0);
+      r.rotation.x = Math.PI / 2; break;
+    }
+    case 'tree': {
+      put(new THREE.CylinderGeometry(0.12, 0.17, 0.9, 10), std(0x8b5a2b), 0, 0, 0.45);
+      put(new THREE.ConeGeometry(0.72, 1.35, 14), std(0x22c55e), 0, 0, 1.35);
+      put(new THREE.ConeGeometry(0.5, 1.0, 14), std(0x16a34a), 0, 0, 2.05); break;
+    }
+    case 'rock': put(new THREE.DodecahedronGeometry(0.55, 0), std(0x94a3b8, { flatShading:true, roughness:0.95 }), 0, 0, 0.45); break;
+    case 'water': {
+      const mat = new THREE.MeshStandardMaterial({ color: 0x1e88e5, transparent: true, opacity: 0.55,
+        emissive: 0x0a4a8a, emissiveIntensity: 0.35, roughness: 0.15, metalness: 0.2, side: THREE.DoubleSide, depthWrite: false });
+      if(dimension === '2d') put(new THREE.BoxGeometry(4, 4, 0.4), mat, 0, 0, 2);
+      else put(new THREE.BoxGeometry(4, 0.4, 4), mat, 0, 0, 0.2);
+      g.userData.isWater = true; g.userData.texture = 'none'; break;
+    }
+    case 'lava': {
+      const mat = new THREE.MeshStandardMaterial({ color: 0xff4500, transparent: true, opacity: 0.95,
+        emissive: 0xff2200, emissiveIntensity: 1.5, roughness: 0.7, metalness: 0.05 });
+      if(dimension === '2d') put(new THREE.BoxGeometry(4, 1.4, 0.4), mat, 0, 0, 0.7);
+      else put(new THREE.BoxGeometry(4, 0.4, 4), mat, 0, 0, 0.2);
+      g.userData.isLava = true; g.userData.isHazard = true; g.userData.texture = 'none'; break;
+    }
+    case 'cloud': {
+      const inner = new THREE.Group();
+      const mat = std(0xffffff, { emissive: 0x99bbff, emissiveIntensity: 0.15, roughness: 0.95 });
+      const add = (r, x, y, z) => {
+        const m = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), mat);
+        m.position.set(x, z, y); m.castShadow = true; m.receiveShadow = false; inner.add(m);
+      };
+      add(0.75, 0,   0,   0.60); add(0.95, 0.85,0,   0.55); add(0.65,-0.80,0,   0.55);
+      add(0.70, 0.30,0.6, 0.85); add(0.60,-0.40,0.5, 0.80);
+      g.add(inner);
+      g.userData.isCloud = true; g.userData.cloudInner = inner; g.userData.texture = 'none'; break;
+    }
+    case 'mountain': {
+      const rockMat = std(0x6b7280, { flatShading: true, roughness: 0.95 });
+      const snowMat = std(0xf8fafc, { roughness: 0.85, flatShading: true });
+      const rock = put(new THREE.ConeGeometry(3.5, 6, 7), rockMat, 0, 0, 3);
+      rock.rotation.y = Math.PI / 7;
+      const snow = put(new THREE.ConeGeometry(1.5, 2.5, 7), snowMat, 0, 0, 5);
+      snow.rotation.y = Math.PI / 7;
+      g.userData.isMountain = true; g.userData.texture = 'none'; break;
+    }
+  }
+  if(!g.userData.texture) g.userData.texture = 'none';
+  return g;
+}
+
+let selected = null;
+let mode = 'build';
+let score = 0;
+let snapshot = null;
+const keys = {};
+let elapsed = 0;
+const counters = {};
+const cooldowns = {};
+
+let cameraYaw = 0, cameraPitch = 0.35;
+let viewMode = 'third';
+let pointerLocked = false;
+let invertMouseX = true, invertMouseY = false;
+const MOUSE_SENS = 0.0022;
+const PITCH_MIN = -1.15, PITCH_MAX = 1.25, THIRD_DIST = 7.0;
+
+let player2DFacing = 1;
+const GRAVITY = 26;
+const JUMP_VEL = 13;
+const MOVE_SPEED_2D = 7, MOVE_SPEED_3D = 6.5;
+const PLAYER_RADIUS = 0.45, PLAYER_HEIGHT = 1.7, FOOT_RADIUS = 0.30, WALL_SKIN = 0.03;
+
+const projectiles = [], playerProjectiles = [], particleSystems = [];
+const enemyCooldowns = new Map();
+const PROJ_SPEED = 13, PROJ_RADIUS = 0.14, PROJ_LIFETIME = 3.0;
+const ENEMY_RANGE = 22, ENEMY_MIN_CD = 2.0, ENEMY_MAX_CD = 3.0;
+const PLAYER_FIRE_RATE = 0.16, PLAYER_PROJ_SPEED = 26, PLAYER_PROJ_RADIUS = 0.12;
+let playerFireCd = 0, mouseDown = false;
+
+const LAVA_DAMAGE_CD = 1.0;
+const EDIT_PASSWORD = '14091987';
+let editModeUnlocked = false;
+
+let raceActive = false, raceTime = 0, raceFinished = false, bestTime = null;
+try { const s = localStorage.getItem('kubosfera_best_time'); if(s) bestTime = parseFloat(s); } catch(_){}
+
+function formatTime(sec){
+  if(sec == null || isNaN(sec)) return '—';
+  const m = Math.floor(sec/60), s = Math.floor(sec%60), cs = Math.floor((sec*100)%100);
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+}
+function updateTimerDisplay(){
+  const t = formatTime(raceTime);
+  timerVal.textContent = t; timerBigVal.textContent = t;
+  const rec = bestTime != null && raceTime < bestTime;
+  timerHud.classList.toggle('record', rec); timerBig.classList.toggle('record', rec);
+}
+let hitFlashTimer = 0, scorePulseTimer = 0;
+function isSolid(obj){ return !!obj && obj.userData.solid === true && !obj.userData.dead; }
+function isPlayer(obj){ return !!obj && obj.userData.isPlayer === true; }
+
+function addObject(type, opts = {}){
+  const obj = createObject(type);
+  const meta = PALETTE.find(p => p.type === type);
+  counters[type] = (counters[type] || 0) + 1;
+  obj.userData.type = type;
+  obj.userData.label = `${meta.name} ${counters[type]}`;
+  obj.userData.solid = meta.solid === true;
+  obj.userData.layer2D = 0;
+  obj.userData.blocklyXml = '';
+  obj.userData._faceX = 1;
+
+  let uiX, uiY, uiZ;
+  if(dimension === '2d' && opts.x === undefined){
+    const camX = camera2D.position.x;
+    const camY = camera2D.position.y;
+    const halfW = (camera2D.right - camera2D.left) / 2;
+    const halfH = (camera2D.top - camera2D.bottom) / 2;
+    uiX = camX + (Math.random() - 0.5) * halfW * 0.5;
+    const vertBase = Math.max(0, camY - halfH + 2);
+    uiZ = opts.z ?? (vertBase + Math.random() * 2);
+    uiY = 0;
+  } else {
+    uiX = opts.x ?? ((Math.random() - 0.5) * 6);
+    uiY = opts.y ?? (dimension === '2d' ? 0 : (Math.random() - 0.5) * 6);
+    if(type === 'cloud' && opts.z === undefined && dimension === '3d') uiZ = 6 + Math.random() * 2;
+    else uiZ = opts.z ?? 0;
+  }
+  obj.position.set(uiX, uiZ, uiY);
+  if(opts.ry) obj.rotation.y = opts.ry;
+  if(type === 'ramp' && obj.userData.rampMesh){
+    const a = opts.rampAngle ?? 0;
+    obj.userData.rampAngle = a;
+    obj.userData.rampMesh.rotation.x = THREE.MathUtils.degToRad(-a);
+  }
+  if(type === 'enemy'){
+    obj.userData.maxHp = opts.hp ?? 1;
+    obj.userData.hp = obj.userData.maxHp;
+    obj.userData.zoneRadius = opts.zoneRadius ?? 5.5;
+    obj.userData.aggro = false;
+    obj.userData.homeX = uiX; obj.userData.homeY = uiY;
+    if(dimension === '3d'){
+      const zone = new THREE.Mesh(
+        new THREE.RingGeometry(obj.userData.zoneRadius - 0.15, obj.userData.zoneRadius, 48),
+        new THREE.MeshBasicMaterial({ color:0xff4444, transparent:true, opacity:0.35, side:THREE.DoubleSide, depthWrite:false }));
+      zone.rotation.x = -Math.PI / 2;
+      zone.position.set(obj.position.x, 0.06, obj.position.z);
+      getActiveGroup().add(zone); obj.userData.zoneMesh = zone;
+      const fill = new THREE.Mesh(
+        new THREE.CircleGeometry(obj.userData.zoneRadius, 32),
+        new THREE.MeshBasicMaterial({ color:0xff2222, transparent:true, opacity:0.05, side:THREE.DoubleSide, depthWrite:false }));
+      fill.rotation.x = -Math.PI / 2;
+      fill.position.set(obj.position.x, 0.05, obj.position.z);
+      getActiveGroup().add(fill); obj.userData.zoneFill = fill;
+    } else {
+      obj.userData.patrolMin = uiX - 3; obj.userData.patrolMax = uiX + 3; obj.userData.patrolDir = -1;
+    }
+  }
+  getActiveGroup().add(obj);
+  objects.push(obj);
+  refreshSceneList();
+  return obj;
+}
+function removeObject(obj){
+  if(!obj) return;
+  const i = objects.indexOf(obj); if(i >= 0) objects.splice(i, 1);
+  if(obj.userData._rt && obj.userData._rt.saySprite){
+    scene.remove(obj.userData._rt.saySprite);
+    if(obj.userData._rt.saySprite.material){
+      if(obj.userData._rt.saySprite.material.map) obj.userData._rt.saySprite.material.map.dispose();
+      obj.userData._rt.saySprite.material.dispose();
+    }
+    obj.userData._rt.saySprite = null;
+  }
+  if(obj.userData.zoneMesh){
+    if(obj.userData.zoneMesh.parent) obj.userData.zoneMesh.parent.remove(obj.userData.zoneMesh);
+    obj.userData.zoneMesh.geometry.dispose(); obj.userData.zoneMesh.material.dispose();
+  }
+  if(obj.userData.zoneFill){
+    if(obj.userData.zoneFill.parent) obj.userData.zoneFill.parent.remove(obj.userData.zoneFill);
+    obj.userData.zoneFill.geometry.dispose(); obj.userData.zoneFill.material.dispose();
+  }
+  if(obj.parent) obj.parent.remove(obj);
+  obj.traverse(o => { if(o.isMesh){ o.geometry.dispose(); (Array.isArray(o.material)?o.material:[o.material]).forEach(m => m.dispose()); } });
+  enemyCooldowns.delete(obj);
+  for(const key of Object.keys(cooldowns)) if(key.startsWith(obj.id + ':')) delete cooldowns[key];
+  if(selected === obj) select(null);
+  if(hoveredObject === obj) hoveredObject = null;
+  refreshSceneList();
+}
+function clearScene(){
+  clearProjectiles(); clearPlayerProjectiles(); clearParticles();
+  [...objects].forEach(removeObject);
+  Object.keys(counters).forEach(k => counters[k] = 0);
+  Object.keys(cooldowns).forEach(k => delete cooldowns[k]);
+  enemyCooldowns.clear();
+  score = 0; updateScore();
+}
+function createScatterEffect(pos, color, count = 14){
+  const group = new THREE.Group(); group.position.copy(pos);
+  const particles = [];
+  for(let i = 0; i < count; i++){
+    const size = 0.08 + Math.random() * 0.1;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(size, size, size),
+      new THREE.MeshBasicMaterial({ color, transparent:true, opacity:1 }));
+    m.position.set((Math.random()-.5)*.5, (Math.random()-.5)*.5, (Math.random()-.5)*.5);
+    group.add(m);
+    particles.push({ mesh: m,
+      vel: new THREE.Vector3((Math.random()-.5)*7, Math.random()*5+2, (Math.random()-.5)*7),
+      spin: new THREE.Vector3((Math.random()-.5)*16, (Math.random()-.5)*16, (Math.random()-.5)*16) });
+  }
+  scene.add(group);
+  particleSystems.push({ group, particles, life: 1.3, maxLife: 1.3 });
+}
+function clearParticles(){
+  for(const ps of particleSystems){
+    scene.remove(ps.group);
+    ps.particles.forEach(p => { p.mesh.geometry.dispose(); p.mesh.material.dispose(); });
+  }
+  particleSystems.length = 0;
+}
+function updateParticles(dt){
+  for(let i = particleSystems.length - 1; i >= 0; i--){
+    const ps = particleSystems[i]; ps.life -= dt;
+    for(const p of ps.particles){
+      p.vel.y -= 14 * dt;
+      p.mesh.position.addScaledVector(p.vel, dt);
+      p.mesh.rotation.x += p.spin.x*dt; p.mesh.rotation.y += p.spin.y*dt; p.mesh.rotation.z += p.spin.z*dt;
+      p.mesh.material.opacity = Math.max(0, ps.life / ps.maxLife);
+    }
+    if(ps.life <= 0){
+      scene.remove(ps.group);
+      ps.particles.forEach(p => { p.mesh.geometry.dispose(); p.mesh.material.dispose(); });
+      particleSystems.splice(i, 1);
+    }
+  }
+}
+
+const selBox = new THREE.BoxHelper(new THREE.Mesh(new THREE.BoxGeometry(1,1,1)), 0x38bdf8);
+selBox.material.depthTest = false; selBox.material.transparent = true; selBox.material.opacity = 0.95;
+selBox.visible = false; scene.add(selBox);
+
+function select(obj){
+  if(selected && selected !== obj && blocklyWs) saveSelectedXml();
+  selected = obj;
+  selBox.visible = !!obj;
+  loadObjectXml(obj);
+  renderInspector();
+  refreshSceneList();
+  const bt = $('blocksTarget');
+  bt.textContent = obj ? obj.userData.label : 'объект не выбран';
+  bt.style.color = obj ? '#38bdf8' : '';
+}
+function rootOf(o){ while(o && !objects.includes(o)) o = o.parent; return o; }
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+function setPointer(e){
+  const r = canvas.getBoundingClientRect();
+  pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+}
+function raycastObjects(e){
+  setPointer(e); raycaster.setFromCamera(pointer, activeCamera);
+  return raycaster.intersectObjects(getActiveGroup().children, true);
+}
+function getGroundPoint(e, worldY){
+  setPointer(e); raycaster.setFromCamera(pointer, activeCamera);
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -worldY);
+  const out = new THREE.Vector3();
+  const r = raycaster.ray.intersectPlane(plane, out);
+  return r ? out : null;
+}
+function getWorld2D(e){
+  const r = canvas.getBoundingClientRect();
+  const ndcX = ((e.clientX - r.left) / r.width) * 2 - 1;
+  const ndcY = -((e.clientY - r.top) / r.height) * 2 + 1;
+  const v = new THREE.Vector3(ndcX, ndcY, 0); v.unproject(camera2D);
+  return { x: v.x, y: v.y };
+}
+
+let dragState = null, downX = 0, downY = 0, cam2DPanning = false;
+let cam2DPanStart = { x: 0, y: 0, camX: 0, camY: 0 };
+let hoveredObject = null;
+
+function onPointerDown(e){
+  if(mode !== 'build') return;
+  if(dimension === '2d' && (e.button === 1 || e.button === 2)){
+    cam2DPanning = true;
+    cam2DPanStart = { x: e.clientX, y: e.clientY, camX: camera2D.position.x, camY: camera2D.position.y };
+    canvas.style.cursor = 'move'; mainEl.classList.add('panning');
+    try { canvas.setPointerCapture(e.pointerId); } catch(_){}
+    e.preventDefault(); e.stopImmediatePropagation(); return;
+  }
+  if(e.button !== 0) return;
+  downX = e.clientX; downY = e.clientY;
+  const hits = raycastObjects(e);
+  if(!hits.length) return;
+  const obj = rootOf(hits[0].object); if(!obj) return;
+  select(obj);
+  hoveredObject = obj;
+  if(dimension === '2d'){
+    const p = getWorld2D(e);
+    dragState = { obj, mode2d: true,
+      offsetX: obj.position.x - p.x, offsetY: obj.position.y - p.y,
+      startX: e.clientX, startY: e.clientY, moved: false, pointerId: e.pointerId };
+  } else {
+    const gp = getGroundPoint(e, obj.position.y);
+    if(!gp) return;
+    dragState = { obj, mode2d: false, planeY: obj.position.y,
+      offsetX: obj.position.x - gp.x, offsetZ: obj.position.z - gp.z,
+      startMouseY: e.clientY, startObjY: obj.position.y,
+      startX: e.clientX, startY: e.clientY, moved: false, shiftMode: e.shiftKey, pointerId: e.pointerId };
+  }
+  controls.enabled = false;
+  canvas.style.cursor = 'grabbing';
+  mainEl.classList.add('dragging');
+  try { canvas.setPointerCapture(e.pointerId); } catch(_){}
+  e.stopImmediatePropagation(); e.preventDefault();
+}
+function onPointerMove(e){
+  if(mode !== 'build') return;
+  if(cam2DPanning){
+    const dx = e.clientX - cam2DPanStart.x, dy = e.clientY - cam2DPanStart.y;
+    const wpx = (camera2D.right - camera2D.left) / canvas.clientWidth;
+    const wpy = (camera2D.top - camera2D.bottom) / canvas.clientHeight;
+    camera2D.position.x = cam2DPanStart.camX - dx * wpx;
+    camera2D.position.y = cam2DPanStart.camY + dy * wpy;
+    camera2D.lookAt(camera2D.position.x, camera2D.position.y, camera2D.position.z);
+    return;
+  }
+  if(dragState){
+    const dx = e.clientX - dragState.startX, dy = e.clientY - dragState.startY;
+    if(Math.hypot(dx, dy) > 4) dragState.moved = true;
+    if(!dragState.moved) return;
+    if(dragState.mode2d){
+      const p = getWorld2D(e);
+      dragState.obj.position.x = p.x + dragState.offsetX;
+      dragState.obj.position.y = Math.max(0, p.y + dragState.offsetY);
+    } else {
+      const useVertical = dragState.shiftMode || e.shiftKey;
+      if(useVertical){
+        const dY = (dragState.startMouseY - e.clientY) * 0.02;
+        dragState.obj.position.y = Math.max(0, dragState.startObjY + dY);
+      } else {
+        const gp = getGroundPoint(e, dragState.planeY);
+        if(gp){ dragState.obj.position.x = gp.x + dragState.offsetX; dragState.obj.position.z = gp.z + dragState.offsetZ; }
+      }
+    }
+    updateInspectorLive();
+    return;
+  }
+  const hits = raycastObjects(e);
+  canvas.style.cursor = hits.length ? 'grab' : '';
+  hoveredObject = hits.length ? rootOf(hits[0].object) : null;
+}
+function onPointerUp(e){
+  if(mode !== 'build') return;
+  if(cam2DPanning){ cam2DPanning = false; canvas.style.cursor = ''; mainEl.classList.remove('panning');
+    try { canvas.releasePointerCapture(e.pointerId); } catch(_){} return; }
+  if(dragState){
+    try { canvas.releasePointerCapture(dragState.pointerId); } catch(_){}
+    dragState = null; controls.enabled = true; canvas.style.cursor = '';
+    mainEl.classList.remove('dragging'); return;
+  }
+  if(Math.hypot(e.clientX - downX, e.clientY - downY) > 5) return;
+  const hits = raycastObjects(e);
+  if(!hits.length){ select(null); hoveredObject = null; }
+}
+canvas.addEventListener('pointerdown', onPointerDown, true);
+canvas.addEventListener('pointermove', onPointerMove);
+canvas.addEventListener('pointerup', onPointerUp);
+canvas.addEventListener('pointerleave', () => { hoveredObject = null; });
+canvas.addEventListener('pointercancel', () => {
+  if(cam2DPanning){ cam2DPanning = false; canvas.style.cursor = ''; mainEl.classList.remove('panning'); }
+  if(dragState){ try { canvas.releasePointerCapture(dragState.pointerId); } catch(_){} dragState = null; controls.enabled = true; canvas.style.cursor = ''; mainEl.classList.remove('dragging'); }
+  hoveredObject = null;
+});
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('wheel', e => {
+  if(mode !== 'build') return;
+  if(dimension === '2d'){ e.preventDefault(); set2DZoom(cam2DZoom * (e.deltaY > 0 ? 0.88 : 1.14)); }
+}, { passive: false });
+
+$('zoomInBtn').onclick = () => set2DZoom(cam2DZoom * 1.2);
+$('zoomOutBtn').onclick = () => set2DZoom(cam2DZoom / 1.2);
+$('zoomResetBtn').onclick = () => { set2DZoom(1); camera2D.position.set(0, VIEW_2D_CENTER_Y, 40); camera2D.lookAt(0, VIEW_2D_CENTER_Y, 0); };
+
+/* ★★★ Синхронизация ползунка и числового поля при перетаскивании ★★★ */
+function updateInspectorLive(){
+  if(!selected) return;
+  inspBody.querySelectorAll('input[type=range]').forEach(inp => {
+    const key = inp.dataset.p; let v;
+    if(key === 'uiX') v = selected.position.x;
+    else if(key === 'uiY') v = selected.position.z;
+    else if(key === 'uiZ') v = selected.position.y;
+    else return;
+    inp.value = v;
+    const num = inspBody.querySelector(`input[type=number][data-p="${key}"]`);
+    if(num) num.value = v.toFixed(1);
+  });
+}
+
+canvas.addEventListener('click', () => {
+  if(mode === 'play' && document.pointerLockElement !== canvas){
+    const p = canvas.requestPointerLock(); if(p && p.catch) p.catch(() => {});
+  }
+});
+document.addEventListener('pointerlockchange', () => { pointerLocked = (document.pointerLockElement === canvas); updatePlayHint(); });
+document.addEventListener('mousemove', e => {
+  if(!pointerLocked || mode !== 'play') return;
+  if(dimension === '2d') return;
+  const sx = invertMouseX ? -1 : 1, sy = invertMouseY ? -1 : 1;
+  cameraYaw += sx * e.movementX * MOUSE_SENS;
+  cameraPitch += sy * e.movementY * MOUSE_SENS;
+  cameraPitch = Math.max(PITCH_MIN, Math.min(PITCH_MAX, cameraPitch));
+});
+document.addEventListener('mousedown', e => {
+  if(mode !== 'play' || e.button !== 0) return;
+  const t = e.target;
+  if(t && t.closest && t.closest('button, .modal, .btn, .games-modal, .num-inp, input')) return;
+  mouseDown = true;
+});
+document.addEventListener('mouseup', e => { if(e.button === 0) mouseDown = false; });
+window.addEventListener('blur', () => { for(const k in keys) keys[k] = false; mouseDown = false; });
+
+const palGrid = $('palGrid');
+PALETTE.forEach(p => {
+  const el = document.createElement('div');
+  const extraCls = (p.enemy ? ' enemy' : '') + (p.finish ? ' finish' : '') + (p.heart ? ' heart' : '')
+    + (p.water ? ' water' : '') + (p.lava ? ' lava' : '') + (p.cloud ? ' cloud' : '') + (p.mountain ? ' mountain' : '');
+  el.className = 'pal-item' + extraCls;
+  el.innerHTML = `<div class="ico">${p.icon}</div><div class="lbl">${p.name}</div>`;
+  el.onclick = () => { const o = addObject(p.type); select(o); };
+  palGrid.appendChild(el);
+});
+$('palCount').textContent = PALETTE.length;
+
+const sceneListEl = $('sceneList');
+function refreshSceneList(){
+  sceneListEl.innerHTML = '';
+  objCountEl.textContent = objects.length;
+  if(!objects.length){ sceneListEl.innerHTML = '<li style="padding:8px 4px;font-size:12px;color:#7c8fa9">Сцена пуста</li>'; return; }
+  objects.forEach(o => {
+    const li = document.createElement('li');
+    const t = o.userData.type;
+    let cls = 'scene-item';
+    if(o === selected) cls += ' active';
+    if(t === 'enemy') cls += ' enemy';
+    if(o.userData.isFinish) cls += ' finish';
+    if(o.userData.isHeart) cls += ' heart';
+    if(o.userData.isWater) cls += ' water';
+    if(o.userData.isLava) cls += ' lava';
+    if(o.userData.isCloud) cls += ' cloud';
+    if(o.userData.isMountain) cls += ' mountain';
+    li.className = cls;
+    let tag = '';
+    if(t === 'enemy' && o.userData.solid) tag = `<span class="tag enemy-tag">HP ${o.userData.hp ?? 1}</span>`;
+    else if(o.userData.isFinish) tag = '<span class="tag finish-tag">ФИНИШ</span>';
+    else if(o.userData.isLava) tag = '<span class="tag hazard-tag">ОПАСНО</span>';
+    else if(o.userData.isWater) tag = '<span class="tag ghost-tag">ВОДА</span>';
+    else if(o.userData.isCloud) tag = '<span class="tag ghost-tag">НЕБО</span>';
+    else if(o.userData.isMountain) tag = '<span class="tag solid-tag">СКАЛА</span>';
+    else if(o.userData.solid) tag = '<span class="tag solid-tag">SOLID</span>';
+    else tag = '<span class="tag ghost-tag">GHOST</span>';
+    const progDot = (o.userData.blocklyXml && o.userData.blocklyXml.indexOf('<block') !== -1)
+      ? '<span style="color:#c4b5fd;font-size:11px" title="Есть программа">🧩</span>' : '';
+    li.innerHTML = `<span class="dot"></span><span class="nm">${o.userData.label}</span>${progDot}${tag}`;
+    li.onclick = () => select(o);
+    sceneListEl.appendChild(li);
+  });
+}
+
+const SWATCHES = ['#38bdf8','#8b5cf6','#f472b6','#fbbf24','#34d399','#f87171','#e2e8f0','#64748b','#f97316','#22c55e','#a855f7','#06b6d4'];
+const inspBody = $('inspectorBody');
+function currentColor(){ let c = null; selected.traverse(o => { if(o.isMesh && !c) c = '#' + o.material.color.getHexString(); }); return c; }
+
+/* ★★★ Хелпер: собрать label с числовым полем ★★★ */
+function fieldHTML(labelText, key, min, max, step, value, fmt){
+  const f = fmt || (v => Number(v).toFixed(1));
+  return `<div class="field">
+    <label><span class="lb-txt">${labelText}</span>
+      <input type="number" class="num-inp" min="${min}" max="${max}" step="${step}" value="${f(value)}" data-p="${key}" data-fmt="${key}">
+    </label>
+    <input type="range" min="${min}" max="${max}" step="${step}" value="${value}" data-p="${key}">
+  </div>`;
+}
+/* ★★★ Единый форматтер значения для отображения в числовом поле ★★★ */
+function formatParamValue(key, v){
+  if(key === 'rotY' || key === 'rampAngle') return String(Math.round(v));
+  if(key.startsWith('scale')) return Number(v).toFixed(2);
+  return Number(v).toFixed(1);
+}
+/* ★★★ Единый применятор значения (для range и для number) ★★★ */
+function applyParam(key, v){
+  if(key === 'uiX') selected.position.x = v;
+  else if(key === 'uiY') selected.position.z = v;
+  else if(key === 'uiZ') selected.position.y = v;
+  else if(key === 'rotY') selected.rotation.y = THREE.MathUtils.degToRad(v);
+  else if(key === 'rampAngle'){
+    selected.userData.rampAngle = v;
+    if(selected.userData.rampMesh) selected.userData.rampMesh.rotation.x = THREE.MathUtils.degToRad(-v);
+  }
+  else if(key === 'scaleX') selected.scale.x = v;
+  else if(key === 'scaleY') selected.scale.y = v;
+  else if(key === 'scaleZ') selected.scale.z = v;
+}
+/* ★★★ Привязка range ↔ number для любого контейнера ★★★ */
+function bindRangeNumberInputs(container){
+  container.querySelectorAll('input[type=range]').forEach(range => {
+    const key = range.dataset.p;
+    const num = container.querySelector(`input[type=number][data-p="${key}"]`);
+    const min = parseFloat(range.min), max = parseFloat(range.max);
+
+    range.addEventListener('input', () => {
+      const v = parseFloat(range.value);
+      applyParam(key, v);
+      if(num && document.activeElement !== num){
+        num.value = formatParamValue(key, v);
+        num.classList.remove('invalid');
+      }
+    });
+
+    if(num){
+      // Пока печатают — обновляем живой предпросмотр, но допускаем пустое/недописанное
+      num.addEventListener('input', () => {
+        const raw = num.value.trim();
+        if(raw === '' || raw === '-' || raw === '.' || raw === '-.'){ num.classList.remove('invalid'); return; }
+        const parsed = parseFloat(raw);
+        if(isNaN(parsed)){ num.classList.add('invalid'); return; }
+        num.classList.remove('invalid');
+        // Применяем как есть — чтобы можно было набрать «150», даже если max=100,
+        // затем при blur/Enter клампим к границам.
+        applyParam(key, parsed);
+        // Слайдер двигаем в пределах допустимого (визуальная обратная связь)
+        range.value = Math.max(min, Math.min(max, parsed));
+      });
+
+      // На blur / Enter — зажать в диапазон и нормализовать формат
+      const commit = () => {
+        let v = parseFloat(num.value);
+        if(isNaN(v)) v = parseFloat(range.value);
+        v = Math.max(min, Math.min(max, v));
+        num.value = formatParamValue(key, v);
+        num.classList.remove('invalid');
+        range.value = v;
+        applyParam(key, v);
+      };
+      num.addEventListener('change', commit);
+      num.addEventListener('blur', commit);
+      num.addEventListener('keydown', ev => {
+        if(ev.key === 'Enter'){ ev.preventDefault(); commit(); num.blur(); }
+        else if(ev.key === 'Escape'){ num.value = formatParamValue(key, parseFloat(range.value)); num.blur(); }
+        // ↑/↓ работают штатно у input[type=number] — шаг = step из разметки
+      });
+      // Колесо мыши над полем — прибавить/убавить step
+      num.addEventListener('wheel', ev => {
+        if(document.activeElement !== num) return;
+        ev.preventDefault();
+        const step = parseFloat(num.step) || 1;
+        const dir = ev.deltaY > 0 ? -1 : 1;
+        let v = (parseFloat(num.value) || 0) + step * dir;
+        v = Math.max(min, Math.min(max, v));
+        num.value = formatParamValue(key, v);
+        range.value = v;
+        applyParam(key, v);
+      }, { passive: false });
+    }
+  });
+}
+
+function renderInspector(){
+  if(!selected){
+    let html = `<p class="insp-empty">Выберите объект.<br><br>
+      <b>Оси:</b> X, Y — горизонталь · Z — вертикаль.<br>
+      <kbd>Delete</kbd> — удалить · <kbd>ПКМ/СКМ</kbd> — камера (2D)<br>
+      <kbd>Колесо</kbd> — зум · <kbd>WASD</kbd> — панорама (2D) · <kbd>0</kbd> — сброс камеры<br>
+      <span style="color:#38bdf8">💡 Значение рядом со слайдером можно ввести вручную.</span></p>`;
+    if(dimension === '2d' && mode === 'build'){
+      html += `<div class="section"><h4>🌍 Подземный слой (2D)</h4>
+        ${fieldHTML('Глубина', 'ugDepth', 1, 30, 0.5, undergroundSettings.depth, v => Number(v).toFixed(1))}
+        <div class="tex-grid" id="ugTexGrid"></div>
+        <div class="tex-upload">
+          <label for="ugTexUpload">📁 Загрузить свою</label>
+          <input type="file" id="ugTexUpload" accept="image/*">
+        </div>
+      </div>`;
+    }
+    inspBody.innerHTML = html;
+    if(dimension === '2d' && mode === 'build'){
+      // Спец-обработчик для ugDepth (не связан с selected)
+      const ugRange = inspBody.querySelector('input[type=range][data-p="ugDepth"]');
+      const ugNum = inspBody.querySelector('input[type=number][data-p="ugDepth"]');
+      if(ugRange){
+        const applyDepth = (v) => {
+          undergroundSettings.depth = v;
+          updateUnderground();
+        };
+        ugRange.addEventListener('input', () => {
+          const v = parseFloat(ugRange.value);
+          applyDepth(v);
+          if(ugNum && document.activeElement !== ugNum) ugNum.value = v.toFixed(1);
+        });
+        if(ugNum){
+          const min = 1, max = 30;
+          ugNum.addEventListener('input', () => {
+            const raw = ugNum.value.trim();
+            if(raw === '' || raw === '-' || raw === '.') return;
+            const parsed = parseFloat(raw);
+            if(isNaN(parsed)) return;
+            applyDepth(parsed);
+            ugRange.value = Math.max(min, Math.min(max, parsed));
+          });
+          const commit = () => {
+            let v = parseFloat(ugNum.value);
+            if(isNaN(v)) v = parseFloat(ugRange.value);
+            v = Math.max(min, Math.min(max, v));
+            ugNum.value = v.toFixed(1);
+            ugRange.value = v;
+            applyDepth(v);
+          };
+          ugNum.addEventListener('change', commit);
+          ugNum.addEventListener('blur', commit);
+          ugNum.addEventListener('keydown', ev => {
+            if(ev.key === 'Enter'){ ev.preventDefault(); commit(); ugNum.blur(); }
+            else if(ev.key === 'Escape'){ ugNum.value = undergroundSettings.depth.toFixed(1); ugNum.blur(); }
+          });
+        }
+      }
+      const ugTexGrid = document.getElementById('ugTexGrid');
+      if(ugTexGrid){
+        const TEX_LIST = ['none','soil','checker','stripes','bricks','wood','grass','stone','rainbow','grid','dots','lava'];
+        TEX_LIST.forEach(t => {
+          const chip = document.createElement('div');
+          chip.className = 'tex-chip' + (t === undergroundSettings.texture ? ' active' : '');
+          chip.title = t;
+          if(t === 'none') chip.innerHTML = '<span class="no-tex">∅</span>';
+          else chip.appendChild(makeTextureThumb(t));
+          chip.onclick = () => { undergroundSettings.texture = t; updateUnderground(); renderInspector(); };
+          ugTexGrid.appendChild(chip);
+        });
+        Object.keys(userTextures).forEach(id => {
+          const key = 'user:' + id;
+          const chip = document.createElement('div');
+          chip.className = 'tex-chip' + (key === undergroundSettings.texture ? ' active' : '');
+          const img = document.createElement('img');
+          img.src = userTextures[id].image.src;
+          chip.appendChild(img);
+          chip.onclick = () => { undergroundSettings.texture = key; updateUnderground(); renderInspector(); };
+          ugTexGrid.appendChild(chip);
+        });
+      }
+      const ugUpload = document.getElementById('ugTexUpload');
+      if(ugUpload){
+        ugUpload.onchange = (ev) => {
+          const file = ev.target.files[0]; if(!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            const img = new Image();
+            img.onload = () => {
+              const tex = new THREE.Texture(img); tex.needsUpdate = true;
+              tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+              const id = 'ug' + Date.now();
+              userTextures[id] = tex;
+              undergroundSettings.texture = 'user:' + id;
+              updateUnderground(); renderInspector();
+            };
+            img.src = reader.result;
+          };
+          reader.readAsDataURL(file);
+        };
+      }
+    }
+    return;
+  }
+  const p = selected.position, r = selected.rotation, s = selected.scale;
+  const cur = currentColor();
+  const solid = selected.userData.solid === true;
+  const layer = selected.userData.layer2D || 0;
+  const isEnemy = selected.userData.type === 'enemy';
+  const isFinish = !!selected.userData.isFinish;
+  const isPlayer = !!selected.userData.isPlayer;
+  const isHeart = !!selected.userData.isHeart;
+  const isRamp = !!selected.userData.isRamp;
+  const isWater = !!selected.userData.isWater;
+  const isLava = !!selected.userData.isLava;
+  const isCloud = !!selected.userData.isCloud;
+  const isMountain = !!selected.userData.isMountain;
+  const uiX = p.x, uiY = p.z, uiZ = p.y;
+  let headCls = '';
+  if(isEnemy) headCls += ' enemy';
+  if(isFinish) headCls += ' finish';
+  if(isHeart) headCls += ' heart';
+  if(isWater) headCls += ' water';
+  if(isLava) headCls += ' lava';
+  if(isCloud) headCls += ' cloud';
+  if(isMountain) headCls += ' mountain';
+  const hasProg = selected.userData.blocklyXml && selected.userData.blocklyXml.indexOf('<block') !== -1;
+  const rotYDeg = Math.round(THREE.MathUtils.radToDeg(r.y));
+  const rampA = selected.userData.rampAngle ?? 0;
+
+  let html = `
+    <div class="obj-head${headCls}">
+      <span class="dot"></span>
+      <span class="nm">${selected.userData.label}</span>
+      ${isPlayer ? '' : `<span class="solid-pip ${solid ? 'on' : 'off'}">${solid ? 'ТВЁРДЫЙ' : 'ПРОХОД'}</span>`}
+    </div>`;
+  if(hasProg) html += `<div class="prog-note">🧩 <b>Есть программа.</b> Редактируется в панели «Логика» снизу.</div>`;
+  if(isFinish)   html += `<div class="finish-note"><b>🏁 Финиш.</b> Коснитесь флага — таймер остановится.</div>`;
+  if(isHeart)    html += `<div class="heart-note"><b>❤️ Сердечко.</b> +1 жизнь при касании (макс 9).</div>`;
+  if(isEnemy)    html += `<div class="enemy-note"><b>👹 Враг.</b> HP: <b>${selected.userData.hp ?? 1}</b>.</div>`;
+  if(isWater)    html += `<div class="water-note"><b>💧 Вода.</b> Полупрозрачная.</div>`;
+  if(isLava)     html += `<div class="lava-note"><b>🔥 Лава.</b> Наносит урон.</div>`;
+  if(isCloud)    html += `<div class="cloud-note"><b>☁️ Облако.</b> Парит в воздухе.</div>`;
+  if(isMountain) html += `<div class="mountain-note"><b>⛰️ Гора.</b> Массивное препятствие.</div>`;
+  if(!isPlayer){
+    html += `<div class="section"><h4>Коллизия</h4>
+      <div class="solid-switch">
+        <div class="txt"><b>${solid ? 'Препятствие' : 'Проходимый'}</b>
+        <span>${solid ? 'Робот упирается' : 'Робот проходит насквозь'}</span></div>
+        <div class="switch ${solid ? 'on' : ''}" id="swSolid"></div>
+      </div></div>`;
+  }
+  html += `<div class="section"><h4>Позиция</h4>
+    ${fieldHTML('X (гориз)', 'uiX', -100, 100, 0.1, uiX, v => Number(v).toFixed(1))}
+    ${dimension === '3d' ? fieldHTML('Y (гориз)', 'uiY', -100, 100, 0.1, uiY, v => Number(v).toFixed(1)) : ''}
+    ${fieldHTML('Z (вертикаль)', 'uiZ', 0, 40, 0.1, uiZ, v => Number(v).toFixed(1))}
+  </div>`;
+  html += `<div class="section"><h4>Вращение</h4>
+    ${fieldHTML('Y', 'rotY', 0, 360, 1, rotYDeg, v => String(Math.round(v)))}
+    ${isRamp ? fieldHTML('📐 Угол склона', 'rampAngle', -60, 60, 1, rampA, v => String(Math.round(v))) : ''}
+  </div>`;
+  html += `<div class="section"><h4>Растяжение</h4>
+    ${fieldHTML('X', 'scaleX', 0.1, 5, 0.05, s.x, v => Number(v).toFixed(2))}
+    ${fieldHTML('Y', 'scaleY', 0.1, 5, 0.05, s.y, v => Number(v).toFixed(2))}
+    ${fieldHTML('Z', 'scaleZ', 0.1, 5, 0.05, s.z, v => Number(v).toFixed(2))}
+    <div class="scale-grid">
+      <button class="scale-btn" data-sp="uniform">🔒 Связно</button>
+      <button class="scale-btn" data-sp="flat">⬜ Плоско</button>
+      <button class="scale-btn" data-sp="reset">↺ Сброс</button>
+    </div></div>`;
+  if(dimension === '2d' && !isPlayer && !isFinish && !isHeart){
+    html += `<div class="section"><h4>Слой в 2D</h4>
+      <div class="layer-grid">
+        <button class="layer-btn${layer === -1 ? ' active' : ''}" data-layer="-1">⬅<br>Задний</button>
+        <button class="layer-btn${layer === 0 ? ' active' : ''}" data-layer="0">◼<br>Средний</button>
+        <button class="layer-btn${layer === 1 ? ' active' : ''}" data-layer="1">➡<br>Передний</button>
+      </div>
+    </div>`;
+  }
+  html += `<div class="section"><h4>Цвет</h4>
+    <div class="swatches" id="swatches">${SWATCHES.map(c => `<div class="sw${c === cur ? ' active' : ''}" data-c="${c}" style="background:${c}"></div>`).join('')}</div>
+  </div>`;
+  if(!isWater && !isLava && !isCloud){
+    html += `<div class="section"><h4>Текстура</h4>
+      <div class="tex-grid" id="texGrid"></div>
+      <div class="tex-upload"><label for="texUpload">📁 Загрузить свою</label><input type="file" id="texUpload" accept="image/*"></div>
+    </div>`;
+  }
+  html += `<div class="section"><h4>Фон сцены</h4><div class="bg-grid" id="bgGrid"></div></div>`;
+  html += `<div class="insp-actions">
+    <button class="btn" id="btnDup">Дублировать</button>
+    <button class="btn" id="btnReset">↺ Сброс</button>
+    <button class="btn danger" id="btnDel" title="Delete">Удалить</button>
+  </div>`;
+  inspBody.innerHTML = html;
+
+  // ★ Привязываем все range ↔ number
+  bindRangeNumberInputs(inspBody);
+
+  const texGrid = $('texGrid');
+  if(texGrid){
+    const TEX_LIST = ['none','soil','checker','stripes','bricks','wood','grass','stone','rainbow','grid','dots','lava'];
+    const curTex = selected.userData.texture || 'none';
+    TEX_LIST.forEach(t => {
+      const chip = document.createElement('div');
+      chip.className = 'tex-chip' + (t === curTex ? ' active' : '');
+      chip.title = t;
+      if(t === 'none') chip.innerHTML = '<span class="no-tex">∅</span>';
+      else chip.appendChild(makeTextureThumb(t));
+      chip.onclick = () => { applyTextureToObject(selected, t); renderInspector(); };
+      texGrid.appendChild(chip);
+    });
+    Object.keys(userTextures).forEach(id => {
+      const key = 'user:' + id;
+      const chip = document.createElement('div');
+      chip.className = 'tex-chip' + (key === curTex ? ' active' : '');
+      chip.title = 'Моя текстура';
+      const img = document.createElement('img');
+      img.src = userTextures[id].image.src;
+      chip.appendChild(img);
+      chip.onclick = () => { applyTextureToObject(selected, key); renderInspector(); };
+      texGrid.appendChild(chip);
+    });
+    const texUploadEl = $('texUpload');
+    if(texUploadEl){
+      texUploadEl.onchange = (ev) => {
+        const file = ev.target.files[0]; if(!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const tex = new THREE.Texture(img); tex.needsUpdate = true;
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            const id = 'u' + Date.now();
+            userTextures[id] = tex;
+            applyTextureToObject(selected, 'user:' + id);
+            renderInspector();
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      };
+    }
+  }
+  const bgGrid = $('bgGrid');
+  Object.entries(BACKGROUNDS).forEach(([id, bg]) => {
+    const chip = document.createElement('div');
+    chip.className = 'bg-chip' + (id === currentBg ? ' active' : '');
+    chip.dataset.bg = id; chip.title = bg.name;
+    chip.style.background = `linear-gradient(180deg, ${bg.top}, ${bg.bot})`;
+    chip.onclick = () => { applyBackground(id); renderInspector(); };
+    bgGrid.appendChild(chip);
+  });
+
+  inspBody.querySelectorAll('.scale-btn').forEach(btn => {
+    btn.onclick = () => {
+      const sp = btn.dataset.sp;
+      if(sp === 'uniform'){ const a = (selected.scale.x + selected.scale.y + selected.scale.z) / 3; selected.scale.setScalar(a); }
+      else if(sp === 'flat') selected.scale.set(selected.scale.x, selected.scale.y, 0.1);
+      else selected.scale.set(1, 1, 1);
+      renderInspector();
+    };
+  });
+  inspBody.querySelectorAll('.sw').forEach(sw => {
+    sw.onclick = () => {
+      setColor(selected, sw.dataset.c);
+      inspBody.querySelectorAll('.sw').forEach(x => x.classList.remove('active'));
+      sw.classList.add('active');
+    };
+  });
+  const swSolid = $('swSolid');
+  if(swSolid) swSolid.onclick = () => { selected.userData.solid = !selected.userData.solid; renderInspector(); refreshSceneList(); };
+  inspBody.querySelectorAll('.layer-btn').forEach(btn => {
+    btn.onclick = () => { selected.userData.layer2D = parseInt(btn.dataset.layer); applyLayer2D(); renderInspector(); };
+  });
+  $('btnDup').onclick = () => {
+    const copy = addObject(selected.userData.type, {
+      x: selected.position.x + 1.6, y: selected.position.z + 1.6, z: selected.position.y,
+      zoneRadius: selected.userData.zoneRadius, rampAngle: selected.userData.rampAngle
+    });
+    copy.userData.solid = selected.userData.solid;
+    copy.userData.layer2D = selected.userData.layer2D;
+    copy.userData.blocklyXml = selected.userData.blocklyXml || '';
+    copy.scale.copy(selected.scale); copy.rotation.copy(selected.rotation);
+    if(!isWater && !isLava && !isCloud && !isMountain){
+      applyTextureToObject(copy, selected.userData.texture || 'none');
+      setColor(copy, currentColor());
+    }
+    select(copy);
+  };
+  $('btnReset').onclick = () => { selected.scale.set(1, 1, 1); selected.rotation.set(0, 0, 0); renderInspector(); };
+  $('btnDel').onclick = () => removeObject(selected);
+}
+function setColor(obj, hex){
+  const c = new THREE.Color(hex);
+  obj.traverse(o => {
+    if(o.isMesh){
+      o.material.color.copy(c);
+      if(o.material.emissive) o.material.emissive.setHex(c.getHex()).multiplyScalar(0.25);
+    }
+  });
+}
+
+const LAYER_Z = { back: -3.0, middle: 1.2, front: 3.0 };
+const PLAYER_2D_Z = 0;
+function getLayerZ(obj){
+  const L = obj.userData.layer2D || 0;
+  if(L === -1) return LAYER_Z.back;
+  if(L === 1) return LAYER_Z.front;
+  return LAYER_Z.middle;
+}
+function applyLayer2D(){
+  if(dimension !== '2d') return;
+  for(const o of objects){
+    if(isPlayer(o)) continue;
+    o.position.z = getLayerZ(o);
+  }
+  const p = objects.find(isPlayer); if(p) p.position.z = PLAYER_2D_Z;
+}
+
+const viewBtnLabel = $('viewBtnLabel');
+function setViewMode(v){
+  viewMode = v;
+  mainEl.classList.toggle('first-person', v === 'first');
+  viewBtnLabel.textContent = v === 'first' ? '👁 1-е лицо' : '👁 3-е лицо';
+  const p = objects.find(isPlayer);
+  if(p) p.visible = (v !== 'first' && !p.userData.dead);
+}
+$('viewBtn').onclick = () => setViewMode(viewMode === 'first' ? 'third' : 'first');
+const invBtn = $('invBtn'), invBtnLabel = $('invBtnLabel');
+function updateInvBtn(){ invBtnLabel.textContent = invertMouseX ? '🔄 Мышь X: инверт.' : '🔄 Мышь X: норм.'; invBtn.classList.toggle('on', invertMouseX); }
+invBtn.onclick = () => { invertMouseX = !invertMouseX; updateInvBtn(); };
+updateInvBtn();
+
+function setDimension(d){
+  if(d === dimension) return;
+  const wasPlaying = mode === 'play';
+  if(wasPlaying) setMode('build');
+  dimension = d;
+  objects = objectsByDim[d];
+  document.querySelectorAll('.dim-btn').forEach(b => b.classList.toggle('active', b.dataset.dim === d));
+  mainEl.classList.toggle('dim2d', d === '2d');
+  modeBadge.textContent = d === '2d' ? '2D' : '3D';
+  ground.visible = (d === '3d'); grid.visible = (d === '3d');
+  group3D.visible = (d === '3d');
+  group2D.visible = (d === '2d');
+  if(undergroundMesh) undergroundMesh.visible = (d === '2d');
+  for(const o of objectsByDim[d]){
+    if(o.userData.isCoin){
+      o.children.forEach(mesh => {
+        if(mesh.isMesh){
+          if(d === '2d') mesh.rotation.set(Math.PI / 2, 0, 0);
+          else mesh.rotation.set(0, 0, Math.PI / 2);
+        }
+      });
+    }
+  }
+  if(d === '2d'){
+    activeCamera = camera2D; controls.enabled = false;
+    updateCamera2DFrustum();
+    camera2D.position.set(0, VIEW_2D_CENTER_Y, 40);
+    camera2D.lookAt(0, VIEW_2D_CENTER_Y, 0);
+    vpHint.innerHTML = '<b>ЛКМ</b> — перетащить · <b>ПКМ/СКМ</b> — двигать камеру<br><b>Колесо</b> — зум · <b>WASD</b> — панорама · <b>0</b> — сброс · <b>Delete</b> — удалить';
+    dragBadge.textContent = '📐 Плоскость XY';
+  } else {
+    activeCamera = camera3D; controls.enabled = true;
+    camera3D.position.set(14, 12, 14);
+    controls.target.set(0, 1, 0);
+    controls.update();
+    vpHint.innerHTML = '<b>ЛКМ по объекту</b> — перетащить · <b>Shift</b> — вертикаль<br>ЛКМ по фону — вращение · Колесо — зум · <b>Delete</b> — удалить';
+    dragBadge.textContent = '🖱 Плоскость XZ';
+  }
+  applyBackground(currentBg);
+  applyLayer2D();
+  ensureResize();
+  if(wasPlaying) setMode('play');
+  if(selected) renderInspector();
+}
+document.querySelectorAll('.dim-btn').forEach(b => { b.onclick = () => setDimension(b.dataset.dim); });
+
+function transferProject(targetDim){
+  if(targetDim === dimension){ toast('Уже в этом режиме'); return; }
+  const oldDim = dimension;
+  const dst = objectsByDim[targetDim];
+  objects = dst;
+  dst.slice().forEach(o => removeObject(o));
+  Object.keys(counters).forEach(k => counters[k] = 0);
+  Object.keys(cooldowns).forEach(k => delete cooldowns[k]);
+  objects = objectsByDim[oldDim];
+  const data = objects.map(o => {
+    let col = null;
+    o.traverse(m => { if(m.isMesh && !col) col = '#' + m.material.color.getHexString(); });
+    return {
+      type: o.userData.type, x: o.position.x, y: o.position.z, z: o.position.y,
+      ry: o.rotation.y, sx: o.scale.x, sy: o.scale.y, sz: o.scale.z,
+      solid: o.userData.solid, layer2D: o.userData.layer2D, texture: o.userData.texture,
+      color: col, hp: o.userData.maxHp, zoneRadius: o.userData.zoneRadius,
+      rampAngle: o.userData.rampAngle, blocklyXml: o.userData.blocklyXml || '',
+    };
+  });
+  dimension = targetDim;
+  objects = objectsByDim[targetDim];
+  data.forEach(dd => {
+    const o = addObject(dd.type, { x: dd.x, y: dd.y, z: dd.z, ry: dd.ry, hp: dd.hp, zoneRadius: dd.zoneRadius, rampAngle: dd.rampAngle });
+    o.scale.set(dd.sx, dd.sy, dd.sz);
+    o.userData.solid = dd.solid;
+    o.userData.layer2D = dd.layer2D;
+    o.userData.blocklyXml = dd.blocklyXml || '';
+    if(dd.texture && dd.texture !== 'none') applyTextureToObject(o, dd.texture);
+    if(dd.color) setColor(o, dd.color);
+  });
+  dimension = null;
+  setDimension(targetDim);
+  applyLayer2D();
+  refreshSceneList();
+  if(selected) select(null);
+  updateZoomHud();
+  toast(`Перенесено в ${targetDim.toUpperCase()}`);
+}
+$('btnTo2D').onclick = () => transferProject('2d');
+$('btnTo3D').onclick = () => transferProject('3d');
+
+function toast(msg){
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:100;padding:10px 20px;background:linear-gradient(135deg,#0891b2,#06b6d4);color:#fff;font-weight:700;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.4)';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1800);
+}
+function updateZoomHud(){ if(!zoomVal) return; zoomVal.textContent = Math.round(cam2DZoom * 100) + '%'; }
+
+const blocksEl = $('blocks'), playHelp = $('playHelp');
+document.querySelectorAll('.tab').forEach(t => { t.onclick = () => setMode(t.dataset.mode); });
+
+function updatePlayHint(){
+  if(mode !== 'play') return;
+  const raceInfo = raceActive ? ' · 🏁 до финиша!' : '';
+  if(dimension === '2d'){
+    playHelp.textContent = `A/D — идти · Пробел — прыжок · ЛКМ — огонь${raceInfo} · Q — выход`;
+  } else {
+    const inv = invertMouseX ? ' · инверт.X' : '';
+    playHelp.textContent = pointerLocked
+      ? `Мышь${inv}${raceInfo} · ЛКМ — ОГОНЬ · WASD · V — вид · Q — выход`
+      : 'Кликните, чтобы захватить мышь';
+  }
+}
+
+function setMode(m){
+  if(m === mode) return;
+  if(mode === 'build' && blocklyWs) saveSelectedXml();
+  mode = m;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
+  mainEl.classList.toggle('playing', m === 'play');
+  blocksEl.style.display = (m === 'play') ? 'none' : 'flex';
+  appEl.classList.remove('blocks-expanded');
+  appEl.classList.add('no-transition');
+  if(m === 'play') appEl.style.gridTemplateRows = '54px 1fr';
+  else appEl.style.gridTemplateRows = '54px 1fr 236px';
+  void appEl.offsetHeight;
+  appEl.classList.remove('no-transition');
+  controls.enabled = (m === 'build' && dimension === '3d');
+  if(cam2DPanning){ cam2DPanning = false; canvas.style.cursor = ''; mainEl.classList.remove('panning'); }
+  if(dragState){ try { canvas.releasePointerCapture(dragState.pointerId); } catch(_){} dragState = null; canvas.style.cursor = ''; mainEl.classList.remove('dragging'); }
+  hoveredObject = null;
+  if(m === 'play') startPlay(); else stopPlay();
+  ensureResize();
+  requestAnimationFrame(() => {
+    ensureResize();
+    if(typeof Blockly !== 'undefined' && blocklyWs){ try{ Blockly.svgResize(blocklyWs); }catch(_){} }
+  });
+  setTimeout(ensureResize, 60);
+  setTimeout(ensureResize, 320);
+  if(selected) renderInspector();
+}
+
+function startPlay(){
+  if(blocklyWs) saveSelectedXml();
+  saveSnapshot();
+  let p = objects.find(isPlayer);
+  if(!p) p = addObject('player', { x: 0, y: 0, z: 1 });
+  p.userData.dead = false; p.userData.vy = 0;
+  player2DFacing = 1;
+  if(dimension === '2d'){ applyLayer2D(); }
+  else nudgePlayerOutOfObstacles();
+  score = 5; updateScore();
+  raceTime = 0; raceFinished = false; raceActive = true;
+  updateTimerDisplay();
+  Object.keys(cooldowns).forEach(k => delete cooldowns[k]);
+  enemyCooldowns.clear();
+  clearProjectiles(); clearPlayerProjectiles(); clearParticles();
+  playerFireCd = 0; mouseDown = false;
+  hitFlashTimer = 0; scorePulseTimer = 0;
+  hitFlash.classList.remove('active'); scoreHud.classList.remove('hit');
+  gameoverModal.classList.remove('active'); winModal.classList.remove('active');
+  cameraYaw = 0; cameraPitch = 0.35;
+  setViewMode('third');
+  for(const o of objects){
+    o.userData.baseY = o.position.y;
+    o.userData.vy = 0;
+    o.userData._lavaCd = 0;
+    o.userData._floating = false;
+    o.userData._floatBase = null;
+    o.userData._faceX = 1;
+    initRuntimeState(o);
+    o.userData._prog = null;
+    if(o.userData.blocklyXml && o.userData.blocklyXml.indexOf('<block') !== -1){
+      try{ o.userData._prog = buildProgramFromXml(o.userData.blocklyXml); }
+      catch(e){ console.warn('compile', o.userData.label, e); }
+    }
+    if(o.userData.isEnemy){
+      o.userData.dead = false; o.visible = true;
+      o.userData.aggro = false;
+      o.userData.hp = o.userData.maxHp;
+      o.userData.homeX = o.position.x; o.userData.homeY = o.position.z;
+      if(o.userData.zoneMesh){
+        o.userData.zoneMesh.visible = (dimension === '3d');
+        o.userData.zoneMesh.material.color.setHex(0xff4444);
+        o.userData.zoneMesh.material.opacity = 0.35;
+      }
+      if(o.userData.zoneFill){
+        o.userData.zoneFill.visible = (dimension === '3d');
+        o.userData.zoneFill.material.opacity = 0.05;
+      }
+      enemyCooldowns.set(o, 0.8 + Math.random() * 0.9);
+    } else { o.userData.dead = false; o.visible = true; }
+  }
+  p.visible = (viewMode !== 'first');
+  applyLayer2D();
+  updatePlayHint();
+}
+function stopPlay(){
+  if(document.pointerLockElement === canvas) document.exitPointerLock();
+  clearProjectiles(); clearPlayerProjectiles(); clearParticles();
+  enemyCooldowns.clear();
+  for(const o of objects){
+    if(o.userData._rt && o.userData._rt.saySprite){
+      scene.remove(o.userData._rt.saySprite);
+      if(o.userData._rt.saySprite.material){
+        if(o.userData._rt.saySprite.material.map) o.userData._rt.saySprite.material.map.dispose();
+        o.userData._rt.saySprite.material.dispose();
+      }
+      o.userData._rt.saySprite = null;
+    }
+    o.userData._prog = null; o.userData._rt = null; o.userData._floating = false;
+  }
+  restoreSnapshot();
+  mainEl.classList.remove('first-person');
+  hitFlash.classList.remove('active'); scoreHud.classList.remove('hit');
+  gameoverModal.classList.remove('active'); winModal.classList.remove('active');
+  raceActive = false; raceFinished = false; raceTime = 0;
+  updateTimerDisplay();
+  timerHud.classList.remove('record'); timerBig.classList.remove('record');
+  if(dimension === '3d'){
+    camera3D.position.set(14, 12, 14);
+    controls.target.set(0, 1, 0); controls.update();
+  }
+  applyLayer2D();
+}
+function restartPlay(){
+  gameoverModal.classList.remove('active'); winModal.classList.remove('active');
+  if(document.pointerLockElement === canvas) document.exitPointerLock();
+  clearProjectiles(); clearPlayerProjectiles(); clearParticles();
+  enemyCooldowns.clear();
+  Object.keys(cooldowns).forEach(k => delete cooldowns[k]);
+  mouseDown = false;
+  restoreSnapshot();
+  setTimeout(() => startPlay(), 30);
+}
+function saveSnapshot(){
+  snapshot = objects.map(o => ({
+    obj: o, pos: o.position.clone(), rot: o.rotation.clone(), scale: o.scale.clone(),
+    visible: o.visible, hp: o.userData.hp, dead: o.userData.dead, aggro: o.userData.aggro
+  }));
+}
+function restoreSnapshot(){
+  if(!snapshot) return;
+  snapshot.forEach(s => {
+    s.obj.position.copy(s.pos); s.obj.rotation.copy(s.rot); s.obj.scale.copy(s.scale);
+    s.obj.visible = s.visible;
+    s.obj.userData.dead = s.dead || false;
+    s.obj.userData.vy = 0; s.obj.userData._lavaCd = 0; s.obj.userData._floating = false;
+    if(s.obj.userData.isEnemy){
+      s.obj.userData.hp = s.obj.userData.maxHp;
+      s.obj.userData.aggro = false;
+      if(s.obj.userData.zoneMesh){
+        s.obj.userData.zoneMesh.visible = (dimension === '3d');
+        s.obj.userData.zoneMesh.material.color.setHex(0xff4444);
+        s.obj.userData.zoneMesh.material.opacity = 0.35;
+      }
+      if(s.obj.userData.zoneFill){
+        s.obj.userData.zoneFill.visible = (dimension === '3d');
+        s.obj.userData.zoneFill.material.opacity = 0.05;
+      }
+    }
+  });
+  snapshot = null;
+}
+function updateScore(){
+  document.getElementById('scoreVal').textContent = score;
+  const icon = score > 0 ? '❤️' : '💀';
+  if(scoreHud.childNodes[0]) scoreHud.childNodes[0].nodeValue = icon + ' ';
+}
+
+window.addEventListener('keydown', e => {
+  const tag = (e.target && e.target.tagName) || '';
+  if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if(e.target && e.target.closest && e.target.closest('#blocklyDiv')) return;
+  if(mode === 'play' && ['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+  keys[e.code] = true;
+  if(mode === 'build' && (e.code === 'Delete' || e.code === 'Backspace')){
+    if(selected){ e.preventDefault(); removeObject(selected); return; }
+  }
+  if(mode === 'build' && dimension === '2d' && (e.code === 'Digit0' || e.code === 'Numpad0')){
+    set2DZoom(1); camera2D.position.set(0, VIEW_2D_CENTER_Y, 40); camera2D.lookAt(0, VIEW_2D_CENTER_Y, 0); return;
+  }
+  if(mode === 'play'){
+    if(e.code === 'KeyV' && dimension === '3d') setViewMode(viewMode === 'first' ? 'third' : 'first');
+    if(e.code === 'KeyI' && dimension === '3d'){ invertMouseX = !invertMouseX; updateInvBtn(); updatePlayHint(); }
+    if(e.code === 'KeyQ') setMode('build');
+    if(e.code === 'KeyR') restartPlay();
+  }
+  if(e.code === 'Escape'){
+    if($('gamesModal').classList.contains('active')){ closeGamesModal(); return; }
+    if(mode === 'play'){
+      if(document.pointerLockElement === canvas) document.exitPointerLock();
+      else setMode('build');
+    }
+  }
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+function distXZ(a, b){ return Math.hypot(a.position.x - b.position.x, a.position.z - b.position.z); }
+function dist2D(a, b){ return Math.hypot(a.position.x - b.position.x, a.position.y - b.position.y); }
+function distActive(a, b){ return dimension === '2d' ? dist2D(a, b) : distXZ(a, b); }
+
+function spawnProjectile(from, target){
+  const group = new THREE.Group();
+  group.add(new THREE.Mesh(new THREE.SphereGeometry(PROJ_RADIUS, 12, 10), new THREE.MeshBasicMaterial({ color: 0xffb347 })));
+  const g = new THREE.Mesh(new THREE.SphereGeometry(PROJ_RADIUS*1.9, 12, 10), new THREE.MeshBasicMaterial({ color: 0xff4500, transparent:true, opacity:0.4, depthWrite:false }));
+  group.add(g);
+  const h = new THREE.Mesh(new THREE.SphereGeometry(PROJ_RADIUS*3, 12, 10), new THREE.MeshBasicMaterial({ color: 0xff0000, transparent:true, opacity:0.14, depthWrite:false }));
+  group.add(h);
+  group.position.copy(from); scene.add(group);
+  const dir = new THREE.Vector3().subVectors(target, from).normalize();
+  projectiles.push({ mesh: group, vel: dir.multiplyScalar(PROJ_SPEED), life: PROJ_LIFETIME, glow: g });
+}
+function clearProjectiles(){
+  for(const p of projectiles){
+    scene.remove(p.mesh);
+    p.mesh.traverse(o => { if(o.isMesh){ o.geometry.dispose(); o.material.dispose(); } });
+  }
+  projectiles.length = 0;
+}
+function updateProjectiles(dt){
+  const player = objects.find(isPlayer);
+  const alive = player && !player.userData.dead;
+  for(let i = projectiles.length - 1; i >= 0; i--){
+    const p = projectiles[i];
+    p.life -= dt;
+    p.mesh.position.addScaledVector(p.vel, dt);
+    if(p.glow) p.glow.scale.setScalar(1 + Math.sin(elapsed*12 + i) * 0.15);
+    let hit = false;
+    if(alive){
+      const dy = p.mesh.position.y - (player.position.y + PLAYER_HEIGHT*0.55);
+      const dx = p.mesh.position.x - player.position.x;
+      const dz = dimension === '2d' ? 0 : p.mesh.position.z - player.position.z;
+      const dh = Math.hypot(dx, dz);
+      if(dh*dh + dy*dy < (PLAYER_RADIUS + PROJ_RADIUS + 0.05)**2){ onPlayerHit(); hit = true; }
+    }
+    if(!hit){
+      for(const obj of objects){
+        if(obj === player || !isSolid(obj) || obj.userData.isEnemy) continue;
+        if(getBox(obj).containsPoint(p.mesh.position)){ hit = true; break; }
+      }
+    }
+    if(!hit && p.mesh.position.y < PROJ_RADIUS*0.5 && dimension === '3d') hit = true;
+    if(p.life <= 0) hit = true;
+    if(hit){
+      scene.remove(p.mesh);
+      p.mesh.traverse(o => { if(o.isMesh){ o.geometry.dispose(); o.material.dispose(); } });
+      projectiles.splice(i, 1);
+    }
+  }
+}
+function updatePlayerShooting(dt){
+  playerFireCd -= dt;
+  const p = objects.find(isPlayer);
+  if(mouseDown && playerFireCd <= 0 && p && !p.userData.dead && !raceFinished){
+    shootPlayer(); playerFireCd = PLAYER_FIRE_RATE;
+  }
+}
+function shootPlayer(){
+  const p = objects.find(isPlayer); if(!p) return;
+  let dir;
+  if(dimension === '2d') dir = new THREE.Vector3(player2DFacing, 0, 0);
+  else {
+    const cp = Math.cos(cameraPitch);
+    dir = new THREE.Vector3(Math.sin(cameraYaw)*cp, -Math.sin(cameraPitch), Math.cos(cameraYaw)*cp).normalize();
+  }
+  const start = new THREE.Vector3(p.position.x + dir.x*0.6, p.position.y + 1.3, p.position.z + dir.z*0.6);
+  spawnPlayerProjectile(start, dir);
+  if(dimension === '3d'){ cameraPitch -= 0.012; if(cameraPitch < PITCH_MIN) cameraPitch = PITCH_MIN; }
+}
+function spawnPlayerProjectile(from, dir){
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(PLAYER_PROJ_RADIUS, 10, 8), new THREE.MeshBasicMaterial({ color: 0xa5f3fc })));
+  const gl = new THREE.Mesh(new THREE.SphereGeometry(PLAYER_PROJ_RADIUS*2, 10, 8), new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent:true, opacity:0.45, depthWrite:false }));
+  g.add(gl);
+  const ha = new THREE.Mesh(new THREE.SphereGeometry(PLAYER_PROJ_RADIUS*3.2, 10, 8), new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent:true, opacity:0.15, depthWrite:false }));
+  g.add(ha);
+  g.position.copy(from); scene.add(g);
+  playerProjectiles.push({ mesh: g, vel: dir.clone().multiplyScalar(PLAYER_PROJ_SPEED), life: 2.2, glow: gl });
+}
+function clearPlayerProjectiles(){
+  for(const p of playerProjectiles){
+    scene.remove(p.mesh);
+    p.mesh.traverse(o => { if(o.isMesh){ o.geometry.dispose(); o.material.dispose(); } });
+  }
+  playerProjectiles.length = 0;
+}
+function updatePlayerProjectiles(dt){
+  for(let i = playerProjectiles.length - 1; i >= 0; i--){
+    const p = playerProjectiles[i];
+    p.life -= dt;
+    p.mesh.position.addScaledVector(p.vel, dt);
+    if(p.glow) p.glow.scale.setScalar(1 + Math.sin(elapsed*14 + i) * 0.12);
+    let hit = false;
+    for(const obj of objects){
+      if(!obj.userData.isEnemy || obj.userData.dead) continue;
+      const ex = obj.position.x, ey = obj.position.y + 0.9, ez = obj.position.z;
+      const dx = p.mesh.position.x - ex, dz = p.mesh.position.z - ez;
+      const dh = Math.hypot(dx, dz);
+      const dy = p.mesh.position.y - ey;
+      if(dh < 0.55 + PLAYER_PROJ_RADIUS && Math.abs(dy) < 1.0){ hitEnemy(obj); hit = true; break; }
+    }
+    if(!hit){
+      for(const obj of objects){
+        if(obj.userData.isEnemy || !isSolid(obj)) continue;
+        if(getBox(obj).containsPoint(p.mesh.position)){ hit = true; break; }
+      }
+    }
+    if(!hit && p.mesh.position.y < PLAYER_PROJ_RADIUS*0.5 && dimension === '3d') hit = true;
+    if(p.life <= 0) hit = true;
+    if(hit){
+      scene.remove(p.mesh);
+      p.mesh.traverse(o => { if(o.isMesh){ o.geometry.dispose(); o.material.dispose(); } });
+      playerProjectiles.splice(i, 1);
+    }
+  }
+}
+function hitEnemy(e){
+  e.userData.hp -= 1;
+  e.traverse(o => { if(o.isMesh && o.material.emissive){
+    const c = o.material.emissive.getHex();
+    o.material.emissive.setHex(0xffffff);
+    setTimeout(() => { if(o.material && o.material.emissive) o.material.emissive.setHex(c); }, 70);
+  }});
+  const hp = e.position.clone(); hp.y += 1; createScatterEffect(hp, 0xfbbf24, 5);
+  if(e.userData.hp <= 0) killEnemy(e);
+  refreshSceneList();
+}
+function killEnemy(e){
+  e.userData.dead = true; e.visible = false;
+  if(e.userData.zoneMesh) e.userData.zoneMesh.visible = false;
+  if(e.userData.zoneFill) e.userData.zoneFill.visible = false;
+  const pos = e.position.clone(); pos.y += 1;
+  createScatterEffect(pos, 0xef4444, 22); createScatterEffect(pos, 0x1f2937, 12);
+  score += 2; updateScore();
+}
+function onPlayerHit(){
+  score -= 1;
+  if(score < 0){ score = 0; updateScore(); killPlayer(); return; }
+  updateScore();
+  hitFlashTimer = 0.35; scorePulseTimer = 0.5;
+  hitFlash.classList.add('active'); scoreHud.classList.add('hit');
+}
+function killPlayer(){
+  const p = objects.find(isPlayer);
+  if(!p || p.userData.dead) return;
+  p.userData.dead = true; p.visible = false;
+  const pos = p.position.clone(); pos.y += 1;
+  createScatterEffect(pos, 0x8b5cf6, 26); createScatterEffect(pos, 0x22d3ee, 14); createScatterEffect(pos, 0xa5f3fc, 8);
+  if(document.pointerLockElement === canvas) document.exitPointerLock();
+  setTimeout(() => { document.getElementById('finalScore').textContent = score; gameoverModal.classList.add('active'); }, 500);
+}
+function updateHazards(){
+  const p = objects.find(isPlayer);
+  if(!p || p.userData.dead || raceFinished) return;
+  const now = elapsed;
+  for(const obj of objects){
+    if(!obj.userData.isLava || obj.userData.dead) continue;
+    const box = getBox(obj);
+    const px = p.position.x, py = p.position.y, pz = p.position.z;
+    const r = PLAYER_RADIUS;
+    const inXZ = px + r > box.min.x && px - r < box.max.x &&
+                 (dimension === '2d' || (pz + r > box.min.z && pz - r < box.max.z));
+    const inY = py < box.max.y && py + PLAYER_HEIGHT > box.min.y;
+    if(inXZ && inY){
+      if((p.userData._lavaCd || 0) <= now){
+        p.userData._lavaCd = now + LAVA_DAMAGE_CD;
+        onPlayerHit();
+        const fx = p.position.clone(); fx.y += 0.6;
+        createScatterEffect(fx, 0xff6600, 12); createScatterEffect(fx, 0xffaa00, 6);
+      }
+    }
+  }
+}
+function updateFinishCheck(){
+  const p = objects.find(isPlayer);
+  if(!p || p.userData.dead || !raceActive || raceFinished) return;
+  for(const obj of objects){
+    if(!obj.userData.isFinish) continue;
+    if(distActive(p, obj) < 1.6){ onFinishReached(); return; }
+  }
+}
+function onFinishReached(){
+  raceFinished = true; raceActive = false;
+  if(document.pointerLockElement === canvas) document.exitPointerLock();
+  const p = objects.find(isPlayer);
+  if(p){ const pos = p.position.clone(); pos.y += 1;
+    createScatterEffect(pos, 0x22c55e, 26); createScatterEffect(pos, 0xfbbf24, 18); createScatterEffect(pos, 0x86efac, 12); }
+  const rec = bestTime == null || raceTime < bestTime;
+  if(rec){ bestTime = raceTime; try { localStorage.setItem('kubosfera_best_time', String(bestTime)); } catch(_){}}
+  document.getElementById('winTime').textContent = formatTime(raceTime);
+  document.getElementById('bestTime').textContent = formatTime(bestTime);
+  document.getElementById('newRecordBadge').style.display = rec ? 'inline-block' : 'none';
+  setTimeout(() => winModal.classList.add('active'), 350);
+}
+function updateEnemies3D(dt){
+  const p = objects.find(isPlayer);
+  if(!p || p.userData.dead) return;
+  for(const obj of objects){
+    if(obj.userData.type !== 'enemy' || obj.userData.dead) continue;
+    if(obj.userData._prog) continue;
+    const dx = p.position.x - obj.position.x;
+    const dz = p.position.z - obj.position.z;
+    const dist = Math.hypot(dx, dz);
+    const homeX = obj.userData.homeX ?? obj.position.x;
+    const homeZ = obj.userData.homeY ?? obj.position.z;
+    const distHome = Math.hypot(obj.position.x - homeX, obj.position.z - homeZ);
+    const zoneR = obj.userData.zoneRadius ?? 5.5;
+    if(dist < zoneR){
+      if(!obj.userData.aggro){ obj.userData.aggro = true;
+        if(obj.userData.zoneMesh){ obj.userData.zoneMesh.material.color.setHex(0xff0000); obj.userData.zoneMesh.material.opacity = 0.55; }
+        if(obj.userData.zoneFill) obj.userData.zoneFill.material.opacity = 0.13; }
+    } else if(obj.userData.aggro && distHome > zoneR*1.5){
+      obj.userData.aggro = false;
+      if(obj.userData.zoneMesh){ obj.userData.zoneMesh.material.color.setHex(0xff4444); obj.userData.zoneMesh.material.opacity = 0.35; }
+      if(obj.userData.zoneFill) obj.userData.zoneFill.material.opacity = 0.05;
+    }
+    if(obj.userData.aggro){
+      if(dist > 1){ const nx = dx/dist, nz = dz/dist; obj.position.x += nx*2.9*dt; obj.position.z += nz*2.9*dt; }
+      if(dist > 0.01) obj.rotation.y = Math.atan2(dx, dz);
+    } else {
+      if(distHome > 0.15){ const hx = homeX - obj.position.x, hz = homeZ - obj.position.z;
+        const hd = Math.hypot(hx, hz); obj.position.x += (hx/hd)*2.2*dt; obj.position.z += (hz/hd)*2.2*dt; }
+      if(dist < ENEMY_RANGE && dist > 0.01) obj.rotation.y = Math.atan2(dx, dz);
+    }
+    let cd = enemyCooldowns.get(obj) ?? 0; cd -= dt;
+    const shoot = obj.userData.aggro || dist < 6;
+    if(cd <= 0 && shoot && dist < ENEMY_RANGE && dist > 0.5 && !raceFinished){
+      const fwd = new THREE.Vector3(Math.sin(obj.rotation.y), 0, Math.cos(obj.rotation.y));
+      const muzzle = obj.position.clone().addScaledVector(fwd, 0.7); muzzle.y += 1.15;
+      const target = p.position.clone(); target.y += PLAYER_HEIGHT*0.55;
+      target.x += (Math.random()-.5)*0.35; target.z += (Math.random()-.5)*0.35;
+      spawnProjectile(muzzle, target);
+      cd = ENEMY_MIN_CD + Math.random() * (ENEMY_MAX_CD - ENEMY_MIN_CD);
+    }
+    enemyCooldowns.set(obj, cd);
+  }
+}
+function updateEnemies2D(dt){
+  const p = objects.find(isPlayer);
+  if(!p || p.userData.dead) return;
+  for(const obj of objects){
+    if(obj.userData.type !== 'enemy' || obj.userData.dead) continue;
+    if(obj.userData._prog) continue;
+    const sp = 2.2;
+    obj.position.x += obj.userData.patrolDir * sp * dt;
+    if(obj.position.x < obj.userData.patrolMin){ obj.position.x = obj.userData.patrolMin; obj.userData.patrolDir = 1; }
+    else if(obj.position.x > obj.userData.patrolMax){ obj.position.x = obj.userData.patrolMax; obj.userData.patrolDir = -1; }
+    obj.userData.vy = (obj.userData.vy || 0) - GRAVITY * dt;
+    obj.position.y += obj.userData.vy * dt;
+    resolve2DVerticalSupport(obj, 0.55, 0.35, 0);
+    const dx = obj.position.x - p.position.x, dy = (obj.position.y + 0.7) - (p.position.y + 0.85);
+    const d = Math.hypot(dx, dy);
+    if(d < 0.85 && (elapsed - (obj.userData.lastTouch || 0)) > 0.9){
+      obj.userData.lastTouch = elapsed; onPlayerHit();
+      p.userData.vy = Math.max(p.userData.vy || 0, 5);
+      p.position.x -= Math.sign(dx) * 0.6;
+    }
+  }
+}
+
+const boxCache = new Map();
+function getBox(obj){
+  let b = boxCache.get(obj);
+  if(!b){ b = new THREE.Box3().setFromObject(obj); boxCache.set(obj, b); }
+  return b;
+}
+function resolveXZCollisions(){
+  const p = objects.find(isPlayer); if(!p) return;
+  const feet = p.position.y, head = feet + PLAYER_HEIGHT;
+  const px = p.position.x, pz = p.position.z;
+  for(const obj of objects){
+    if(obj === p || !isSolid(obj)) continue;
+    const box = getBox(obj);
+    if(feet >= box.max.y - 0.05) continue;
+    if(head <= box.min.y) continue;
+    const cx = Math.max(box.min.x, Math.min(px, box.max.x));
+    const cz = Math.max(box.min.z, Math.min(pz, box.max.z));
+    const dx = px - cx, dz = pz - cz;
+    const d2 = dx*dx + dz*dz;
+    if(d2 < PLAYER_RADIUS * PLAYER_RADIUS){
+      if(d2 > 0.0001){
+        const d = Math.sqrt(d2); const push = (PLAYER_RADIUS - d + WALL_SKIN) / d;
+        p.position.x += dx * push; p.position.z += dz * push;
+      } else p.position.x = box.max.x + PLAYER_RADIUS + WALL_SKIN;
+    }
+  }
+  p.position.x = THREE.MathUtils.clamp(p.position.x, -100, 100);
+  p.position.z = THREE.MathUtils.clamp(p.position.z, -100, 100);
+}
+function resolveVerticalSupport(){
+  const p = objects.find(isPlayer); if(!p) return;
+  const vz = p.userData.vy || 0;
+  if(vz > 0.05) return;
+  const px = p.position.x, pz = p.position.z;
+  let support = 0;
+  for(const obj of objects){
+    if(obj === p || !isSolid(obj)) continue;
+    const box = getBox(obj);
+    if(px + FOOT_RADIUS <= box.min.x) continue;
+    if(px - FOOT_RADIUS >= box.max.x) continue;
+    if(pz + FOOT_RADIUS <= box.min.z) continue;
+    if(pz - FOOT_RADIUS >= box.max.z) continue;
+    if(box.max.y <= p.position.y + 0.25 && box.max.y > support) support = box.max.y;
+  }
+  if(p.position.y < support){ p.position.y = support; p.userData.vy = 0; }
+}
+function nudgePlayerOutOfObstacles(){
+  const p = objects.find(isPlayer); if(!p) return;
+  for(let it = 0; it < 6; it++){
+    let moved = false;
+    for(const obj of objects){
+      if(obj === p || !isSolid(obj)) continue;
+      const box = new THREE.Box3().setFromObject(obj);
+      const cx = Math.max(box.min.x, Math.min(p.position.x, box.max.x));
+      const cz = Math.max(box.min.z, Math.min(p.position.z, box.max.z));
+      const dx = p.position.x - cx, dz = p.position.z - cz;
+      const d2 = dx*dx + dz*dz;
+      if(d2 < PLAYER_RADIUS * PLAYER_RADIUS){
+        if(d2 > 0.0001){ const d = Math.sqrt(d2); const pp = (PLAYER_RADIUS - d + 0.1)/d;
+          p.position.x += dx * pp; p.position.z += dz * pp; }
+        else p.position.x = box.max.x + PLAYER_RADIUS + 0.1;
+        moved = true;
+      }
+    }
+    if(!moved) break;
+  }
+}
+function resolve2DCollisionsX(){
+  const p = objects.find(isPlayer); if(!p) return;
+  const halfW = PLAYER_RADIUS;
+  const feet = p.position.y, head = feet + PLAYER_HEIGHT;
+  for(const obj of objects){
+    if(obj === p || !isSolid(obj)) continue;
+    const box = getBox(obj);
+    if(feet >= box.max.y - 0.05) continue;
+    if(head <= box.min.y) continue;
+    if(p.position.x + halfW > box.min.x && p.position.x - halfW < box.max.x){
+      const l = p.position.x - box.min.x, r = box.max.x - p.position.x;
+      p.position.x = l < r ? box.min.x - halfW - WALL_SKIN : box.max.x + halfW + WALL_SKIN;
+    }
+  }
+}
+function resolve2DVerticalSupport(entity, halfW = PLAYER_RADIUS, fr = 0.3, baseY = 0){
+  let s = baseY;
+  for(const obj of objects){
+    if(obj === entity || !isSolid(obj)) continue;
+    const box = getBox(obj);
+    if(entity.position.x + halfW <= box.min.x) continue;
+    if(entity.position.x - halfW >= box.max.x) continue;
+    if(box.max.y <= entity.position.y + 0.3 && box.max.y > s) s = box.max.y;
+  }
+  if(entity.position.y < s){ entity.position.y = s; entity.userData.vy = 0; }
+}
+function updatePlayer3D(dt){
+  const p = objects.find(isPlayer); if(!p) return;
+  const fwdX = Math.sin(cameraYaw), fwdZ = Math.cos(cameraYaw);
+  const rX = -Math.cos(cameraYaw), rZ = Math.sin(cameraYaw);
+  let dx = 0, dz = 0;
+  if(keys['KeyW'] || keys['ArrowUp']){ dx += fwdX; dz += fwdZ; }
+  if(keys['KeyS'] || keys['ArrowDown']){ dx -= fwdX; dz -= fwdZ; }
+  if(keys['KeyD'] || keys['ArrowRight']){ dx += rX; dz += rZ; }
+  if(keys['KeyA'] || keys['ArrowLeft']){ dx -= rX; dz -= rZ; }
+  if(dx || dz){
+    const l = Math.hypot(dx, dz); dx /= l; dz /= l;
+    p.position.x += dx * MOVE_SPEED_3D * dt;
+    p.position.z += dz * MOVE_SPEED_3D * dt;
+  }
+  p.rotation.y = cameraYaw;
+  resolveXZCollisions();
+  if(keys['Space'] && Math.abs(p.userData.vy || 0) < 0.01) p.userData.vy = 7;
+  p.userData.vy = (p.userData.vy || 0) - 22 * dt;
+  p.position.y += p.userData.vy * dt;
+  resolveVerticalSupport();
+}
+function updatePlayer2D(dt){
+  const p = objects.find(isPlayer); if(!p) return;
+  let dx = 0;
+  if(keys['KeyD'] || keys['ArrowRight']) dx += 1;
+  if(keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
+  if(dx !== 0){
+    player2DFacing = dx;
+    p.position.x += dx * MOVE_SPEED_2D * dt;
+    p.rotation.y = (dx > 0) ? Math.PI/2 : -Math.PI/2;
+  }
+  p.position.z = PLAYER_2D_Z;
+  resolve2DCollisionsX();
+  if(keys['Space'] && Math.abs(p.userData.vy || 0) < 0.01) p.userData.vy = JUMP_VEL;
+  p.userData.vy = (p.userData.vy || 0) - GRAVITY * dt;
+  p.position.y += p.userData.vy * dt;
+  resolve2DVerticalSupport(p, PLAYER_RADIUS, 0.3, 0);
+  p.position.x = THREE.MathUtils.clamp(p.position.x, -100, 100);
+}
+function updateGravity(dt){
+  for(const obj of objects){
+    if(isPlayer(obj) || obj.userData.dead || obj.userData.isEnemy) continue;
+    if(dimension === '2d') continue;
+    if(obj.userData._floating) continue;
+    const vz = obj.userData.vy || 0;
+    if(Math.abs(vz) > 0.001 || obj.position.y > (obj.userData.baseY ?? 0)){
+      obj.userData.vy = vz - 20 * dt;
+      obj.position.y += obj.userData.vy * dt;
+      const b = obj.userData.baseY ?? 0;
+      if(obj.position.y <= b){ obj.position.y = b; obj.userData.vy = 0; }
+    }
+  }
+}
+function updatePlayCamera(){
+  const p = objects.find(isPlayer); if(!p) return;
+  if(dimension === '2d'){
+    const tx = p.position.x, ty = VIEW_2D_CENTER_Y + Math.max(0, p.position.y - 4)*0.4;
+    camera2D.position.x += (tx - camera2D.position.x) * 0.15;
+    camera2D.position.y += (ty - camera2D.position.y) * 0.1;
+    camera2D.lookAt(camera2D.position.x, camera2D.position.y, 0);
+    return;
+  }
+  const cp = Math.cos(cameraPitch);
+  const lX = Math.sin(cameraYaw)*cp, lZ = Math.cos(cameraYaw)*cp;
+  const hY = p.position.y + 1.45;
+  if(viewMode === 'first'){
+    camera3D.position.set(p.position.x, hY, p.position.z);
+    camera3D.lookAt(p.position.x + lX, hY - Math.sin(cameraPitch), p.position.z + lZ);
+  } else {
+    let cx = p.position.x - lX * THIRD_DIST;
+    let cy = hY + Math.sin(cameraPitch) * THIRD_DIST;
+    let cz = p.position.z - lZ * THIRD_DIST;
+    if(cy < 0.4) cy = 0.4;
+    camera3D.position.set(cx, cy, cz);
+    camera3D.lookAt(p.position.x, hY - 0.35, p.position.z);
+  }
+}
+function updateCoins(){
+  const p = objects.find(isPlayer);
+  if(!p || p.userData.dead || raceFinished) return;
+  for(const obj of objects){
+    if(!obj.userData.isCoin || obj.userData.dead) continue;
+    if(distActive(p, obj) < 0.9){
+      obj.userData.dead = true; obj.visible = false;
+      score += 1; updateScore();
+      const pos = obj.position.clone(); pos.y += 0.6;
+      createScatterEffect(pos, 0xfbbf24, 14); createScatterEffect(pos, 0xfacc15, 8);
+    }
+  }
+}
+function updateHearts(){
+  const p = objects.find(isPlayer);
+  if(!p || p.userData.dead || raceFinished) return;
+  for(const obj of objects){
+    if(!obj.userData.isHeart || obj.userData.dead) continue;
+    if(distActive(p, obj) < 1.2){
+      obj.userData.dead = true; obj.visible = false;
+      score = Math.min(9, score + 1); updateScore();
+      const pos = obj.position.clone(); pos.y += 0.6;
+      createScatterEffect(pos, 0xec4899, 16);
+    }
+  }
+}
+
+/* =============================================================
+   ПРОГРАММЫ ДЛЯ ПРИМЕРОВ
+============================================================= */
+const X = {
+  flag: n => `<block type="event_flag" x="30" y="30"><next>${n}</next></block>`,
+  forever: b => `<block type="control_forever"><statement name="BODY">${b}</statement></block>`,
+  if: (c, b, n) => `<block type="control_if"><value name="COND">${c}</value><statement name="BODY">${b}</statement>${n?`<next>${n}</next>`:''}</block>`,
+  wait: (n, next) => `<block type="control_wait"><value name="N"><shadow type="math_number"><field name="NUM">${n}</field></shadow></value>${next?`<next>${next}</next>`:''}</block>`,
+  num: n => `<shadow type="math_number"><field name="NUM">${n}</field></shadow>`,
+  txt: t => `<shadow type="text"><field name="TEXT">${t}</field></shadow>`,
+  changeX: (n, next) => `<block type="motion_change_x"><value name="N">${X.num(n)}</value>${next?`<next>${next}</next>`:''}</block>`,
+  changeZ: (n, next) => `<block type="motion_change_z"><value name="N">${X.num(n)}</value>${next?`<next>${next}</next>`:''}</block>`,
+  move: (n, next) => `<block type="motion_move"><value name="N">${X.num(n)}</value>${next?`<next>${next}</next>`:''}</block>`,
+  pointDir: (d, next) => `<block type="motion_point_dir"><value name="D">${X.num(d)}</value>${next?`<next>${next}</next>`:''}</block>`,
+  key: k => `<block type="sensing_keypressed"><field name="KEY">${k}</field></block>`,
+  posX: () => `<block type="sensing_pos"><field name="AXIS">x</field></block>`,
+  lt: (a, b) => `<block type="op_lt"><value name="A">${a}</value><value name="B">${X.num(b)}</value></block>`,
+  gt: (a, b) => `<block type="op_gt"><value name="A">${a}</value><value name="B">${X.num(b)}</value></block>`,
+  score: (n, next) => `<block type="game_score"><value name="N">${X.num(n)}</value>${next?`<next>${next}</next>`:''}</block>`,
+  say: (t, next) => `<block type="looks_say"><value name="T">${X.txt(t)}</value>${next?`<next>${next}</next>`:''}</block>`,
+  hide: (next) => `<block type="looks_hide">${next?`<next>${next}</next>`:''}</block>`,
+};
+const wrap = b => `<xml xmlns="https://developers.google.com/blockly/xml">${b}</xml>`;
+const PROG_TETRIS = wrap(X.flag(X.forever(
+  X.changeZ(-0.06, X.if(X.key('ArrowLeft'), X.changeX(-0.18), X.if(X.key('ArrowRight'), X.changeX(0.18))))
+)));
+function progWalker(startDir, speed, limL, limR){
+  return wrap(X.flag(X.pointDir(startDir, X.forever(
+    X.move(speed, X.if(X.lt(X.posX(), limL), X.pointDir(0), X.if(X.gt(X.posX(), limR), X.pointDir(180))))
+  ))));
+}
+const PROG_PLATFORM = wrap(X.flag(X.forever(
+  X.changeZ(0.08, X.wait(0.4, X.changeZ(-0.08, X.wait(0.4))))
+)));
+function progFlyer(startX, speed, limL, limR){
+  return wrap(X.flag(X.pointDir(180, X.forever(
+    X.move(speed, X.if(X.lt(X.posX(), limL), X.pointDir(0), X.if(X.gt(X.posX(), limR), X.pointDir(180))))
+  ))));
+}
+const PROG_COIN_HELLO = wrap(
+  `<block type="event_touch" x="30" y="30">
+    <next>
+      <block type="looks_say">
+        <value name="T"><shadow type="text"><field name="TEXT">+1!</field></shadow></value>
+        <next>
+          <block type="game_score">
+            <value name="N"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
+            <next><block type="looks_hide"></block></next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>`
+);
+
+/* =============================================================
+   ПОСТРОИТЕЛИ УРОВНЕЙ
+============================================================= */
+function buildTetrisExample(){
+  clearScene();
+  if(dimension !== '2d') setDimension('2d');
+  for(let z = 0.5; z <= 9.5; z += 1){
+    addObject('cube', { x: -3, y: 0, z }); addObject('cube', { x: 3, y: 0, z });
+  }
+  for(let x = -3; x <= 3; x++) addObject('cube', { x, y: 0, z: 0.5 });
+  addObject('sphere', { x: -1, y: 0, z: 1.6 });
+  addObject('sphere', { x: 0, y: 0, z: 1.6 });
+  addObject('sphere', { x: 1, y: 0, z: 1.6 });
+  addObject('sphere', { x: 0, y: 0, z: 2.7 });
+  const piece = addObject('cube', { x: 0, y: 0, z: 9 });
+  piece.userData.blocklyXml = PROG_TETRIS;
+  piece.userData.solid = false;
+  piece.userData.label = '🧱 Падающий блок';
+  addObject('player', { x: 0, y: 0, z: 1 });
+  applyLayer2D(); refreshSceneList();
+  const pg = objects.find(isPlayer); if(pg) select(pg);
+}
+function buildMarioExample(){
+  if(dimension !== '2d') setDimension('2d');
+  clearScene();
+  const gaps = new Set([6,7,12,22,23,32]);
+  for(let i = -6; i <= 42; i++){ if(gaps.has(i)) continue; addObject('cube', { x: i, y: 0, z: 0.5 }); }
+  [[2,2],[3,2],[5,2],[8,2],[9,2],[11,2],[13,2],[14,2],[18,2],[19,2],[20,2],[26,2],[27,2],[28,2]]
+    .forEach(([x,z]) => addObject('cube', { x, y: 0, z }));
+  [[13.5,4.5],[19.5,4.5]].forEach(([x,z]) => addObject('cube', { x, y: 0, z }));
+  [10,16,30].forEach(x => addObject('cylinder', { x, y: 0, z: 0.6 }));
+  [4,15,21,27].forEach(x => {
+    const e = addObject('enemy', { x, y: 0, z: 1, hp: 1 });
+    e.userData.blocklyXml = progWalker(180, 0.05, x - 2.5, x + 2.5);
+  });
+  [3,5,9,11,19,26].forEach(x => addObject('coin', { x, y: 0, z: 1.5 }));
+  [13.5,19.5].forEach(x => addObject('coin', { x, y: 0, z: 6.5 }));
+  addObject('heart', { x: 18, y: 0, z: 2.5 });
+  addObject('lava', { x: 6.5, y: 0, z: 0.7 });
+  addObject('lava', { x: 22.5, y: 0, z: 0.7 });
+  addObject('water', { x: 34, y: 0, z: 0.5 });
+  addObject('mountain', { x: 50, y: 0, z: 0 });
+  const c1 = addObject('cloud', { x: 12, y: 0, z: 9 });
+  c1.userData.blocklyXml = progFlyer(180, 0.03, 5, 25);
+  addObject('cloud', { x: 30, y: 0, z: 10 });
+  addObject('player', { x: -4, y: 0, z: 1 });
+  addObject('finish', { x: 38, y: 0, z: 0 });
+  applyLayer2D(); refreshSceneList();
+  const pg = objects.find(isPlayer); if(pg) select(pg);
+}
+function buildLodeExample(){
+  if(dimension !== '2d') setDimension('2d');
+  clearScene();
+  const platforms = [[-8,0,10],[-4,3,6],[0,5,8],[4,2,6],[8,4,10],[-6,7,4],[2,9,6]];
+  platforms.forEach(([cx, cy, w]) => {
+    for(let i = 0; i < w; i++) addObject('cube', { x: cx - Math.floor(w/2) + i, y: 0, z: cy + 0.5 });
+  });
+  for(let x = -10; x <= 10; x++) addObject('cube', { x, y: 0, z: 0.5 });
+  [[-4,4.5],[-4,5.5],[0,6.5],[4,3.5],[8,5.5],[-6,8.5],[2,10.5]]
+    .forEach(([x, z]) => addObject('coin', { x, y: 0, z }));
+  const e1 = addObject('enemy', { x: -3, y: 0, z: 6, hp: 99 });
+  e1.userData.blocklyXml = progWalker(0, 0.06, -5, 1);
+  e1.userData.solid = false;
+  const e2 = addObject('enemy', { x: 6, y: 0, z: 3, hp: 99 });
+  e2.userData.blocklyXml = progWalker(180, 0.06, 3, 10);
+  e2.userData.solid = false;
+  addObject('player', { x: -6, y: 0, z: 1 });
+  addObject('finish', { x: 8, y: 0, z: 4.5 });
+  applyLayer2D(); refreshSceneList();
+  const pg = objects.find(isPlayer); if(pg) select(pg);
+}
+function buildSonicExample(){
+  if(dimension !== '2d') setDimension('2d');
+  clearScene();
+  for(let x = -8; x <= 40; x++){
+    let z = 0.5;
+    if(x > 3 && x < 10) z = 0.5 + (x - 3) * 0.4;
+    if(x >= 10 && x < 16) z = 3.3 - (x - 10) * 0.4;
+    addObject('cube', { x, y: 0, z });
+  }
+  for(let x = -6; x <= 38; x += 2){
+    let z = 1.8;
+    if(x > 3 && x < 10) z = 1.8 + (x - 3) * 0.4;
+    if(x >= 10 && x < 16) z = 4.6 - (x - 10) * 0.4;
+    if(x > 6 && x < 8) continue;
+    addObject('coin', { x, y: 0, z });
+  }
+  const e1 = addObject('enemy', { x: 15, y: 0, z: 1, hp: 99 });
+  e1.userData.blocklyXml = progWalker(180, 0.18, 12, 28);
+  e1.userData.solid = false;
+  const e2 = addObject('enemy', { x: 25, y: 0, z: 1, hp: 99 });
+  e2.userData.blocklyXml = progWalker(0, 0.22, 22, 35);
+  e2.userData.solid = false;
+  addObject('heart', { x: 20, y: 0, z: 1.5 });
+  addObject('mountain', { x: 48, y: 0, z: 0 });
+  addObject('cloud', { x: 12, y: 0, z: 8 });
+  const c2 = addObject('cloud', { x: 28, y: 0, z: 9 });
+  c2.userData.blocklyXml = progFlyer(180, 0.04, 22, 35);
+  addObject('player', { x: -6, y: 0, z: 1 });
+  addObject('finish', { x: 37, y: 0, z: 0 });
+  applyLayer2D(); refreshSceneList();
+  const pg = objects.find(isPlayer); if(pg) select(pg);
+}
+function buildRaceExample(){
+  if(dimension !== '2d') setDimension('2d');
+  clearScene();
+  for(let x = -8; x <= 60; x++) addObject('cube', { x, y: 0, z: 0.5 });
+  for(let x = -6; x <= 58; x += 4) addObject('cylinder', { x, y: 0, z: 0.62 });
+  const cars = [
+    { x: 8,  dir: 180, lim1: 2,  lim2: 15 },
+    { x: 20, dir: 0,   lim1: 16, lim2: 28 },
+    { x: 32, dir: 180, lim1: 26, lim2: 38 },
+    { x: 46, dir: 0,   lim1: 40, lim2: 55 },
+  ];
+  cars.forEach(c => {
+    const car = addObject('enemy', { x: c.x, y: 0, z: 1, hp: 99 });
+    car.userData.blocklyXml = progWalker(c.dir, 0.08, c.lim1, c.lim2);
+    car.userData.solid = false;
+  });
+  for(let x = -4; x <= 54; x += 3) addObject('coin', { x, y: 0, z: 2.2 });
+  addObject('lava', { x: 26, y: 0, z: 0.7 });
+  addObject('lava', { x: 42, y: 0, z: 0.7 });
+  addObject('heart', { x: 36, y: 0, z: 2 });
+  addObject('mountain', { x: 66, y: 0, z: 0 });
+  addObject('cloud', { x: 18, y: 0, z: 9 });
+  addObject('cloud', { x: 40, y: 0, z: 10 });
+  addObject('player', { x: -6, y: 0, z: 1 });
+  addObject('finish', { x: 57, y: 0, z: 0 });
+  applyLayer2D(); refreshSceneList();
+  const pg = objects.find(isPlayer); if(pg) select(pg);
+}
+function buildShooterExample(){
+  if(dimension !== '2d') setDimension('2d');
+  clearScene();
+  for(let x = -10; x <= 30; x++) addObject('cube', { x, y: 0, z: 0.5 });
+  addObject('platform', { x: 5, y: 0, z: 3.22 });
+  addObject('platform', { x: 15, y: 0, z: 3.22 });
+  const flyers = [
+    { x: 8,  z: 6,  lim1: 2,  lim2: 12 },
+    { x: 14, z: 7.5,lim1: 8,  lim2: 20 },
+    { x: 6,  z: 9,  lim1: 0,  lim2: 14 },
+    { x: 20, z: 5.5,lim1: 12, lim2: 26 },
+  ];
+  flyers.forEach(f => {
+    const ufo = addObject('enemy', { x: f.x, y: 0, z: f.z, hp: 3 });
+    ufo.userData.blocklyXml = progFlyer(180, 0.06, f.lim1, f.lim2);
+    ufo.userData.solid = false;
+    ufo.userData.label = '🛸 НЛО';
+  });
+  [2,10,18].forEach(x => addObject('heart', { x, y: 0, z: 2 }));
+  for(let x = -4; x <= 24; x += 4) addObject('coin', { x, y: 0, z: 1.5 });
+  addObject('cloud', { x: 20, y: 0, z: 12 });
+  addObject('player', { x: -6, y: 0, z: 1 });
+  applyLayer2D(); refreshSceneList();
+  const pg = objects.find(isPlayer); if(pg) select(pg);
+  toast('🎯 ЛКМ — стрелять!  Двигайся вправо (D)');
+}
+function buildDuckExample(){
+  if(dimension !== '2d') setDimension('2d');
+  clearScene();
+  for(let x = -8; x <= 30; x++) addObject('cube', { x, y: 0, z: 0.5 });
+  [[2,3],[6,5.5],[10,3],[14,5.5],[18,3],[22,5.5]]
+    .forEach(([x,z]) => addObject('platform', { x, y: 0, z }));
+  const moving = addObject('platform', { x: 4, y: 0, z: 7 });
+  moving.userData.blocklyXml = PROG_PLATFORM;
+  moving.userData.label = '🎢 Движущаяся платформа';
+  const moving2 = addObject('platform', { x: 20, y: 0, z: 7 });
+  moving2.userData.blocklyXml = PROG_PLATFORM;
+  moving2.userData.label = '🎢 Движущаяся платформа';
+  [[-3,2],[1,4],[5,6.5],[9,4],[13,6.5],[17,4],[21,6.5],[25,4]]
+    .forEach(([x, z]) => addObject('coin', { x, y: 0, z }));
+  addObject('heart', { x: 0, y: 0, z: 2 });
+  addObject('heart', { x: 12, y: 0, z: 2 });
+  const e1 = addObject('enemy', { x: 8, y: 0, z: 1, hp: 99 });
+  e1.userData.blocklyXml = progWalker(180, 0.05, 6, 12);
+  e1.userData.solid = false;
+  const e2 = addObject('enemy', { x: 16, y: 0, z: 1, hp: 99 });
+  e2.userData.blocklyXml = progWalker(0, 0.06, 14, 22);
+  e2.userData.solid = false;
+  addObject('mountain', { x: 38, y: 0, z: 0 });
+  addObject('cloud', { x: 6, y: 0, z: 10 });
+  addObject('cloud', { x: 24, y: 0, z: 11 });
+  addObject('player', { x: -5, y: 0, z: 1 });
+  addObject('finish', { x: 28, y: 0, z: 0 });
+  applyLayer2D(); refreshSceneList();
+  const pg = objects.find(isPlayer); if(pg) select(pg);
+}
+
+const EXAMPLES = [
+  { id:'tetris',  name:'Тетрис',          icon:'🧱', desc:'Управляй падающим блоком — стрелки ←/→', build: buildTetrisExample },
+  { id:'mario',   name:'Марио',           icon:'🍄', desc:'Прыгай по платформам, собирай монеты',   build: buildMarioExample },
+  { id:'lode',    name:'Lode Runner',     icon:'⛏️', desc:'Собирай золото на ярусах',               build: buildLodeExample },
+  { id:'sonic',   name:'Соник',           icon:'💫', desc:'Быстрые кольца и холмы',                  build: buildSonicExample },
+  { id:'race',    name:'Гонки',           icon:'🏎️', desc:'Обгоняй машины и лужи лавы',              build: buildRaceExample },
+  { id:'shooter', name:'Космошутер',      icon:'🚀', desc:'Стреляй по НЛО (ЛКМ)',                    build: buildShooterExample },
+  { id:'duck',    name:'Утиные истории',  icon:'🦆', desc:'Прыгай по движущимся платформам',         build: buildDuckExample },
+  { id:'sandbox', name:'Песочница',       icon:'🧪', desc:'Свободная сцена — программируй как хочешь', build: buildDemo },
+];
+
+function openGamesModal(){ $('gamesModal').classList.add('active'); if(mode === 'play') setMode('build'); }
+function closeGamesModal(){ $('gamesModal').classList.remove('active'); }
+function renderGamesGrid(){
+  const grid = $('gamesGrid');
+  grid.innerHTML = '';
+  EXAMPLES.forEach(ex => {
+    const card = document.createElement('div');
+    card.className = 'game-card';
+    card.innerHTML = `
+      <div class="prog-badge">🧩 блоки</div>
+      <div class="thumb">${ex.icon}</div>
+      <div class="name">${ex.name}</div>
+      <div class="desc">${ex.desc}</div>
+      <div class="play-overlay">▶ Играть</div>
+    `;
+    card.onclick = () => loadExample(ex.id);
+    grid.appendChild(card);
+  });
+}
+function loadExample(id){
+  closeGamesModal();
+  const ex = EXAMPLES.find(e => e.id === id);
+  if(!ex) return;
+  if(mode === 'play') setMode('build');
+  try{ ex.build(); }
+  catch(e){ console.error('Ошибка загрузки', e); toast('Ошибка загрузки примера'); return; }
+  ensureResize();
+  requestAnimationFrame(ensureResize);
+  if(editModeUnlocked){
+    toast(`🔓 Редактирование: ${ex.name}`);
+    const p = objects.find(isPlayer);
+    if(p) select(p);
+  } else {
+    toast(`▶ ${ex.name}`);
+    setTimeout(() => setMode('play'), 200);
+  }
+}
+function updateEditToggle(){
+  const btn = $('btnEditToggle');
+  if(editModeUnlocked){
+    btn.textContent = '🔓 Режим редактирования';
+    btn.classList.add('unlocked');
+  } else {
+    btn.textContent = '🔒 Редактировать';
+    btn.classList.remove('unlocked');
+  }
+}
+$('btnEditToggle').onclick = () => {
+  if(editModeUnlocked){
+    editModeUnlocked = false;
+    updateEditToggle();
+    toast('🔒 Режим редактирования выключен');
+    return;
+  }
+  const pwd = prompt('Введите пароль для редактирования примеров:');
+  if(pwd === null) return;
+  if(pwd === EDIT_PASSWORD){
+    editModeUnlocked = true;
+    updateEditToggle();
+    toast('✅ Режим редактирования включён');
+  } else {
+    toast('❌ Неверный пароль');
+  }
+};
+$('btnGames').onclick = () => openGamesModal();
+$('btnGamesClose').onclick = () => closeGamesModal();
+$('gamesModal').addEventListener('click', (e) => {
+  if(e.target === $('gamesModal')) closeGamesModal();
+});
+$('btnMario').onclick = () => { loadExample('mario'); };
+
+function buildDemo(){
+  clearScene();
+  if(dimension === '2d'){
+    for(let i = -8; i <= 12; i++) addObject('cube', { x: i, y: 0, z: 0.5 });
+    addObject('player', { x: 0, y: 0, z: 1 });
+    for(let i = 2; i <= 6; i++) addObject('coin', { x: i, y: 0, z: 2.0 });
+    addObject('heart', { x: 8, y: 0, z: 1.5 });
+    addObject('enemy', { x: 5, y: 0, z: 1 });
+    addObject('finish', { x: 10, y: 0, z: 0 });
+    addObject('ramp', { x: -5, y: 0, z: 0.2, rampAngle: 25 });
+    addObject('water', { x: -8, y: 0, z: 0.5 });
+    addObject('lava',  { x: 12, y: 0, z: 0.7 });
+    const cloud = addObject('cloud', { x: 3, y: 0, z: 8 });
+    cloud.userData.blocklyXml = demoProgramCloud();
+    addObject('mountain', { x: -14, y: 0, z: 0 });
+    applyLayer2D(); refreshSceneList(); return;
+  }
+  const p = addObject('player', { x: 0, y: 2, z: 0.5 });
+  addObject('finish', { x: 0, y: -14, z: 0 });
+  [[-3,-3],[3,-3],[0,-7],[-5,3],[5,4]].forEach(([x, y]) => {
+    addObject('coin', { x, y, z: 0.72 });
+  });
+  addObject('heart', { x: -5, y: -6, z: 0.8 });
+  addObject('enemy', { x: 7, y: -3, z: 0, zoneRadius: 5.5 });
+  addObject('enemy', { x: -7, y: -3, z: 0, zoneRadius: 5.5 });
+  addObject('enemy', { x: 0, y: -10, z: 0, zoneRadius: 6.5 });
+  addObject('cube', { x: 0, y: 6, z: 0.5 });
+  addObject('torus', { x: -6, y: -6, z: 0.7 });
+  addObject('tree', { x: 8, y: 5 }); addObject('tree', { x: -8, y: 6 });
+  addObject('rock', { x: 4, y: 8 }); addObject('rock', { x: -3, y: 8 });
+  addObject('platform', { x: 7, y: 7 });
+  addObject('ramp', { x: -3, y: 3, rampAngle: 25 });
+  addObject('wall', { x: 12, y: -8, ry: 0.3 });
+  addObject('sphere', { x: -10, y: 4 });
+  addObject('cylinder', { x: 10, y: 8 });
+  addObject('mountain', { x: 22, y: 12 });
+  addObject('mountain', { x: 28, y: -8 });
+  const cloud = addObject('cloud', { x: 5, y: -8, z: 8 });
+  cloud.userData.blocklyXml = demoProgramCloud();
+  addObject('cloud', { x: -12, y: 8, z: 10 });
+  addObject('water', { x: -12, y: -10 });
+  addObject('lava',  { x: 14, y: 2 });
+  select(p); refreshSceneList();
+}
+function demoProgramCloud(){
+  return `<xml xmlns="https://developers.google.com/blockly/xml">
+    <block type="event_flag" x="30" y="30">
+      <next>
+        <block type="control_forever">
+          <statement name="BODY">
+            <block type="looks_change_size">
+              <value name="N"><shadow type="math_number"><field name="NUM">2</field></shadow></value>
+              <next>
+                <block type="control_wait">
+                  <value name="N"><shadow type="math_number"><field name="NUM">0.4</field></shadow></value>
+                  <next>
+                    <block type="looks_change_size">
+                      <value name="N"><shadow type="math_number"><field name="NUM">-2</field></shadow></value>
+                      <next>
+                        <block type="control_wait">
+                          <value name="N"><shadow type="math_number"><field name="NUM">0.4</field></shadow></value>
+                        </block>
+                      </next>
+                    </block>
+                  </next>
+                </block>
+              </next>
+            </block>
+          </statement>
+        </block>
+      </next>
+    </block>
+    <block type="event_near" x="330" y="30">
+      <next>
+        <block type="looks_say">
+          <value name="T"><shadow type="text"><field name="TEXT">Привет!</field></shadow></value>
+        </block>
+      </next>
+    </block>
+  </xml>`;
+}
+
+$('btnClear').onclick = () => { if(mode === 'play') setMode('build'); clearScene(); select(null); };
+$('btnRestart').onclick = () => restartPlay();
+$('btnToBuild').onclick = () => { gameoverModal.classList.remove('active'); setMode('build'); };
+$('btnWinRestart').onclick = () => restartPlay();
+$('btnWinToBuild').onclick = () => { winModal.classList.remove('active'); setMode('build'); };
+
+$('btnBlocksClear').onclick = () => {
+  if(!selected){ toast('Сначала выберите объект'); return; }
+  if(!blocklyWs) return;
+  suppressWsChange = true;
+  try{ blocklyWs.clear(); }catch(_){}
+  suppressWsChange = false;
+  selected.userData.blocklyXml = '';
+  updateBlocksCount(); refreshSceneList();
+  toast('Программа очищена');
+};
+$('btnBlocksExpand').onclick = () => {
+  appEl.classList.toggle('blocks-expanded');
+  requestAnimationFrame(() => {
+    ensureResize();
+    if(typeof Blockly !== 'undefined' && blocklyWs){ try{ Blockly.svgResize(blocklyWs); }catch(_){} }
+  });
+};
+$('btnBlocksXml').onclick = () => {
+  if(!selected){ toast('Сначала выберите объект'); return; }
+  if(!blocklyWs) return;
+  saveSelectedXml();
+  const xml = selected.userData.blocklyXml || '';
+  const blob = new Blob([xml || '<!-- пусто -->'], { type: 'text/xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${selected.userData.label || 'object'}.xml`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+  toast('XML сохранён');
+};
+$('btnBlocksExample').onclick = () => {
+  if(!selected){ toast('Сначала выберите объект'); return; }
+  if(!blocklyWs) return;
+  suppressWsChange = true;
+  try{
+    blocklyWs.clear();
+    const dom = Blockly.utils.xml.textToDom(demoProgramCloud());
+    Blockly.Xml.domToWorkspace(dom, blocklyWs);
+  }catch(e){ console.warn(e); }
+  suppressWsChange = false;
+  saveSelectedXml();
+  updateBlocksCount(); refreshSceneList();
+  toast('Пример загружен');
+};
+
+const clock = new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  elapsed += dt;
+  boxCache.clear();
+  ensureResize();
+
+  if(dimension === '2d'){
+    for(const o of objects){ if(!isPlayer(o)) o.position.z = getLayerZ(o); }
+    const p = objects.find(isPlayer); if(p) p.position.z = PLAYER_2D_Z;
+  }
+  const alive = (() => { const p = objects.find(isPlayer); return p && !p.userData.dead; })();
+
+  if(mode !== 'play'){
+    if(dimension === '3d'){
+      controls.update();
+      for(const o of objects){
+        if(o.userData.zoneMesh){
+          o.userData.zoneMesh.position.x = o.position.x; o.userData.zoneMesh.position.z = o.position.z;
+          o.userData.zoneFill.position.x = o.position.x; o.userData.zoneFill.position.z = o.position.z;
+          o.userData.homeX = o.position.x; o.userData.homeY = o.position.z;
+        }
+      }
+    } else {
+      const panS = 20 * dt / cam2DZoom;
+      let pdx = 0, pdy = 0;
+      if(keys['KeyA'] || keys['ArrowLeft']) pdx -= 1;
+      if(keys['KeyD'] || keys['ArrowRight']) pdx += 1;
+      if(keys['KeyW'] || keys['ArrowUp']) pdy += 1;
+      if(keys['KeyS'] || keys['ArrowDown']) pdy -= 1;
+      if(pdx || pdy){
+        camera2D.position.x += pdx * panS;
+        camera2D.position.y += pdy * panS;
+        camera2D.lookAt(camera2D.position.x, camera2D.position.y, 0);
+      }
+    }
+    if(selected){ selected.updateMatrixWorld(true); selBox.setFromObject(selected); }
+  } else {
+    if(raceActive && !raceFinished && alive){ raceTime += dt; updateTimerDisplay(); }
+    if(alive && !raceFinished){
+      if(dimension === '2d'){
+        updatePlayer2D(dt); updateEnemies2D(dt);
+        updatePlayerShooting(dt); updatePlayCamera(); updateFinishCheck();
+        updateHearts(); updateCoins(); updateHazards();
+      } else {
+        updatePlayer3D(dt); updateGravity(dt); updateEnemies3D(dt);
+        updatePlayerShooting(dt); updatePlayCamera(); updateFinishCheck();
+        updateHearts(); updateCoins(); updateHazards();
+      }
+      boxCache.clear();
+      for(const o of objects){
+        if(o.userData._prog) runObjectScripts(o, dt);
+      }
+    }
+    boxCache.clear();
+    updateProjectiles(dt); updatePlayerProjectiles(dt); updateParticles(dt);
+    if(hitFlashTimer > 0){ hitFlashTimer -= dt; if(hitFlashTimer <= 0) hitFlash.classList.remove('active'); }
+    if(scorePulseTimer > 0){ scorePulseTimer -= dt; if(scorePulseTimer <= 0) scoreHud.classList.remove('hit'); }
+  }
+
+  for(const o of objects){
+    const paused = (mode === 'build') && (o === hoveredObject || o === selected);
+    if(o.userData.isCoin && o.visible){
+      if(!paused){
+        if(dimension === '2d') o.rotation.z += dt * 2.2;
+        else o.rotation.y += dt * 2.2;
+        if(o.userData._baseY == null) o.userData._baseY = o.position.y;
+        o.position.y = o.userData._baseY + Math.sin(elapsed * 3 + o.id) * 0.07;
+      } else {
+        if(o.userData._baseY == null) o.userData._baseY = o.position.y;
+      }
+    }
+    if(o.userData.isFinish) if(!paused) o.rotation.y += dt * 0.7;
+    if(o.userData.isWater && o.children[0] && !paused){
+      const w = o.children[0];
+      const s = 1 + Math.sin(elapsed * 2.2 + o.id) * 0.05;
+      if(dimension === '2d') w.scale.y = s; else w.scale.z = s;
+    }
+    if(o.userData.isLava && o.children[0] && !paused){
+      const w = o.children[0];
+      if(w.material && w.material.emissiveIntensity !== undefined)
+        w.material.emissiveIntensity = 1.5 + Math.sin(elapsed * 4 + o.id) * 0.6;
+    }
+    if(o.userData.isCloud && o.userData.cloudInner && !paused){
+      o.userData.cloudInner.position.y = Math.sin(elapsed * 0.9 + o.id) * 0.35;
+    }
+    if(o.userData._floating && !paused){
+      const base = o.userData._floatBase ?? o.position.y;
+      o.userData._floatBase = base;
+      o.position.y = base + 0.5 + Math.sin(elapsed * 2.2 + o.id) * 0.35;
+    }
+  }
+  renderer.render(scene, activeCamera);
+}
+
+initBlocklyBlocks();
+initBlocklyWorkspace();
+applyBackground('night');
+createUnderground();
+if(undergroundMesh) undergroundMesh.visible = false;
+resize();
+renderGamesGrid();
+updateEditToggle();
+buildDemo();
+animate();
+setTimeout(() => {
+  const p = objects.find(isPlayer);
+  if(p) select(p); else updateBlocksCount();
+}, 100);
+</script>
+</body>
+</html>
