@@ -462,6 +462,12 @@
   .mrow{padding:0 0 10px}
   .mrow label{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px}
   .mrow label b{color:var(--accent);font-weight:700}
+  .mnum{width:64px;flex:none;background:#0a1424;border:1px solid var(--border);border-radius:6px;
+    color:var(--accent);font:inherit;font-weight:700;font-size:11px;padding:3px 6px;text-align:right;outline:none;
+    font-variant-numeric:tabular-nums;transition:border-color .15s,box-shadow .15s}
+  .mnum:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(56,189,248,.18)}
+  .mnum::-webkit-outer-spin-button,.mnum::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .mnum[type=number]{-moz-appearance:textfield;appearance:textfield}
   .mrow input[type=range]{width:100%;height:4px;border-radius:3px;background:#1e2f4c;outline:none;-webkit-appearance:none}
   .mrow input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
     background:var(--accent);cursor:pointer;box-shadow:0 0 8px rgba(56,189,248,.6)}
@@ -4228,15 +4234,93 @@ function initModeler(){
 
   renderModelerPrimitives();
 
+    /* --- Drag parts в сцене --- */
+  let mDragState = null;
+  const mDragPlane = new THREE.Plane();
+  const mDragHit = new THREE.Vector3();
+  const mDragOffset = new THREE.Vector3();
+
+  function modelerPointerNDC(e){
+    const r = canvas.getBoundingClientRect();
+    mPointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+    mPointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  }
+  function modelerUpdatePosInputs(mesh){
+    const insp = $('modelerInspector');
+    const px = insp.querySelector('input[type=range][data-k="px"]');
+    const pz = insp.querySelector('input[type=range][data-k="pz"]');
+    const nx = insp.querySelector('input[type=number][data-k="px"]');
+    const nz = insp.querySelector('input[type=number][data-k="pz"]');
+    if(px) px.value = mesh.position.x;
+    if(pz) pz.value = mesh.position.z;
+    if(nx) nx.value = mesh.position.x.toFixed(2);
+    if(nz) nz.value = mesh.position.z.toFixed(2);
+  }
+
   canvas.addEventListener('pointerdown', (e) => {
     if(e.button !== 0) return;
-    const downX = e.clientX, downY = e.clientY;
-    const handler = (upE) => {
-      canvas.removeEventListener('pointerup', handler);
-      if(Math.hypot(upE.clientX - downX, upE.clientY - downY) > 4) return;
-      pickModeler(e);
-    };
-    canvas.addEventListener('pointerup', handler);
+    modelerPointerNDC(e);
+    mRaycaster.setFromCamera(mPointer, mCamera);
+    const hits = mRaycaster.intersectObjects(mParts.map(p => p.mesh), false);
+    if(hits.length){
+      const mesh = hits[0].object;
+      selectModelerPart(mesh);
+      // Плоскость на высоте центра детали, горизонтальная (Y-up)
+      mDragPlane.setFromNormalAndCoplanarPoint(
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3(0, mesh.position.y, 0)
+      );
+      if(mRaycaster.ray.intersectPlane(mDragPlane, mDragHit)){
+        mDragOffset.set(mesh.position.x - mDragHit.x, 0, mesh.position.z - mDragHit.z);
+      } else {
+        mDragOffset.set(0, 0, 0);
+      }
+      mDragState = { mesh, startX: e.clientX, startY: e.clientY, moved: false };
+      mControls.enabled = false;
+      canvas.style.cursor = 'grabbing';
+      try{ canvas.setPointerCapture(e.pointerId); }catch(_){}
+      e.preventDefault();
+    } else {
+      // Клик в пустоту — снять выделение (если мышь не уехала)
+      const downX = e.clientX, downY = e.clientY;
+      const upHandler = (upE) => {
+        canvas.removeEventListener('pointerup', upHandler);
+        if(Math.hypot(upE.clientX - downX, upE.clientY - downY) > 4) return;
+        mSelected = null;
+        renderModelerParts();
+        renderModelerInspector();
+      };
+      canvas.addEventListener('pointerup', upHandler);
+    }
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if(!mDragState) return;
+    modelerPointerNDC(e);
+    mRaycaster.setFromCamera(mPointer, mCamera);
+    if(mRaycaster.ray.intersectPlane(mDragPlane, mDragHit)){
+      mDragState.mesh.position.x = mDragHit.x + mDragOffset.x;
+      mDragState.mesh.position.z = mDragHit.z + mDragOffset.z;
+      if(Math.hypot(e.clientX - mDragState.startX, e.clientY - mDragState.startY) > 3){
+        mDragState.moved = true;
+      }
+      modelerUpdatePosInputs(mDragState.mesh);
+    }
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    if(!mDragState) return;
+    try{ canvas.releasePointerCapture(e.pointerId); }catch(_){}
+    mDragState = null;
+    mControls.enabled = true;
+    canvas.style.cursor = '';
+  });
+  canvas.addEventListener('pointercancel', () => {
+    if(mDragState){
+      mDragState = null;
+      mControls.enabled = true;
+      canvas.style.cursor = '';
+    }
   });
 
   new ResizeObserver(() => resizeModeler()).observe(viewportEl);
@@ -4365,9 +4449,11 @@ function renderModelerInspector(){
   const m = mSelected;
   const col = '#' + m.material.color.getHexString();
 
-  const row = (label, key, min, max, step, val) => `
+    const row = (label, key, min, max, step, val) => `
     <div class="mrow">
-      <label>${label} <b>${val.toFixed(2)}</b></label>
+      <label>${label}
+        <input type="number" class="mnum" min="${min}" max="${max}" step="${step}" value="${val.toFixed(2)}" data-k="${key}">
+      </label>
       <input type="range" min="${min}" max="${max}" step="${step}" value="${val}" data-k="${key}">
     </div>`;
 
@@ -4395,21 +4481,61 @@ function renderModelerInspector(){
     <button class="btn danger" id="modelerDelPart" style="width:100%;margin-top:6px">🗑 Удалить деталь</button>
   `;
 
+   const applyK = (m, k, v) => {
+    if(k === 'px') m.position.x = v;
+    else if(k === 'py') m.position.y = v;
+    else if(k === 'pz') m.position.z = v;
+    else if(k === 'rx') m.rotation.x = v;
+    else if(k === 'ry') m.rotation.y = v;
+    else if(k === 'rz') m.rotation.z = v;
+    else if(k === 'sx') m.scale.x = v;
+    else if(k === 'sy') m.scale.y = v;
+    else if(k === 'sz') m.scale.z = v;
+  };
   insp.querySelectorAll('input[type=range]').forEach(inp => {
+    const key = inp.dataset.k;
+    const num = insp.querySelector(`input[type=number][data-k="${key}"]`);
+    const min = parseFloat(inp.min), max = parseFloat(inp.max);
     inp.addEventListener('input', () => {
-      const v = parseFloat(inp.value), k = inp.dataset.k;
-      const l = inp.previousElementSibling.querySelector('b');
-      if(l) l.textContent = v.toFixed(2);
-      if(k === 'px') m.position.x = v;
-      else if(k === 'py') m.position.y = v;
-      else if(k === 'pz') m.position.z = v;
-      else if(k === 'rx') m.rotation.x = v;
-      else if(k === 'ry') m.rotation.y = v;
-      else if(k === 'rz') m.rotation.z = v;
-      else if(k === 'sx') m.scale.x = v;
-      else if(k === 'sy') m.scale.y = v;
-      else if(k === 'sz') m.scale.z = v;
+      const v = parseFloat(inp.value);
+      applyK(m, key, v);
+      if(num && document.activeElement !== num) num.value = v.toFixed(2);
     });
+    if(num){
+      const commit = () => {
+        let v = parseFloat(num.value);
+        if(isNaN(v)) v = parseFloat(inp.value);
+        v = Math.max(min, Math.min(max, v));
+        num.value = v.toFixed(2);
+        inp.value = v;
+        applyK(m, key, v);
+      };
+      num.addEventListener('input', () => {
+        const raw = num.value.trim();
+        if(raw === '' || raw === '-' || raw === '.' || raw === '-.') return;
+        const v = parseFloat(raw);
+        if(isNaN(v)) return;
+        applyK(m, key, v);
+        inp.value = Math.max(min, Math.min(max, v));
+      });
+      num.addEventListener('change', commit);
+      num.addEventListener('blur', commit);
+      num.addEventListener('keydown', ev => {
+        if(ev.key === 'Enter'){ ev.preventDefault(); commit(); num.blur(); }
+        else if(ev.key === 'Escape'){ num.value = parseFloat(inp.value).toFixed(2); num.blur(); }
+      });
+      num.addEventListener('wheel', ev => {
+        if(document.activeElement !== num) return;
+        ev.preventDefault();
+        const step = parseFloat(num.step) || 0.05;
+        const dir = ev.deltaY > 0 ? -1 : 1;
+        let v = (parseFloat(num.value) || 0) + step * dir;
+        v = Math.max(min, Math.min(max, v));
+        num.value = v.toFixed(2);
+        inp.value = v;
+        applyK(m, key, v);
+      }, { passive: false });
+    }
   });
 
   insp.querySelectorAll('.mcolor').forEach(el => {
