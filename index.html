@@ -1780,8 +1780,8 @@ function addObject(type, opts = {}){
   const meta = PALETTE.find(p => p.type === type);
   counters[type] = (counters[type] || 0) + 1;
   obj.userData.type = type;
-  obj.userData.label = opts.label || `${meta ? meta.name : type} ${counters[type]}`;
-  obj.userData.solid = meta ? (meta.solid === true) : false;
+  obj.userData.label = opts.label || `${meta.name} ${counters[type]}`;
+  obj.userData.solid = meta.solid === true;
   obj.userData.layer2D = 0;
   obj.userData.blocklyXml = '';
   obj.userData._faceX = 1;
@@ -3472,31 +3472,6 @@ function loadProjectData(data){
     objects = saved;
   }
   Object.keys(counters).forEach(k => counters[k] = 0);
-  
-  // Восстановить кастомные модели (merge — не удаляем существующие)
-  if(data.customModels && typeof data.customModels === 'object'){
-    let added = 0;
-    for(const id in data.customModels){
-      if(!customModels[id]){
-        customModels[id] = data.customModels[id];
-        added++;
-      }
-      if(!PALETTE.find(p => p.type === 'custom_' + id)){
-        PALETTE.push({
-          type: 'custom_' + id,
-          name: data.customModels[id].name,
-          icon: '★',
-          solid: true,
-          custom: true,
-        });
-      }
-    }
-    if(added > 0){
-      renderPalette();
-      saveCustomModelsToStorage();
-      toast(`★ Загружено моделей: ${added}`);
-    }
-  }
   if(data.background) applyBackground(data.background);
   if(data.underground){
     undergroundSettings.depth = data.underground.depth ?? 6;
@@ -3535,7 +3510,24 @@ function loadProjectData(data){
     if(selected) renderInspector();
   }
   ensureResize();
-    
+    // Восстановить кастомные модели (merge — не удаляем существующие)
+  if(data.customModels && typeof data.customModels === 'object'){
+    let added = 0;
+    for(const id in data.customModels){
+      if(!customModels[id]){
+        customModels[id] = data.customModels[id];
+        added++;
+      }
+      if(!PALETTE.find(p => p.type === 'custom_' + id)){
+        PALETTE.push({
+          type: 'custom_' + id,
+          name: data.customModels[id].name,
+          icon: '★',
+          solid: true,
+          custom: true,
+        });
+      }
+    }
     if(added > 0){
       renderPalette();
       saveCustomModelsToStorage();
