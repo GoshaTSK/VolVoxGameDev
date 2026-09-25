@@ -3830,6 +3830,67 @@ setTimeout(() => {
   const p = objects.find(isPlayer);
   if(p) select(p); else updateBlocksCount();
 }, 100);
+  
+/* ========== ПРИЁМ ПРОГРАММ ИЗ ГАЙДА ========== */
+function applyExternalProgram(xml, name){
+  if(!blocklyWs){ toast('⚠ Blockly не готов'); return; }
+  let target = selected;
+  if(!target || isPlayer(target)){
+    const enemy = objects.find(o => o.userData.type === 'enemy' && !o.userData.dead && o.visible);
+    if(enemy){
+      select(enemy);
+      target = enemy;
+    } else if(!target){
+      toast('⚠ Сначала выбери объект в игре');
+      return;
+    }
+  }
+  suppressWsChange = true;
+  try{
+    blocklyWs.clear();
+    const dom = Blockly.utils.xml.textToDom(xml);
+    Blockly.Xml.domToWorkspace(dom, blocklyWs);
+  }catch(e){
+    console.warn('applyExternalProgram', e);
+    suppressWsChange = false;
+    toast('❌ Ошибка загрузки блоков');
+    return;
+  }
+  suppressWsChange = false;
+  saveSelectedXml();
+  updateBlocksCount();
+  refreshSceneList();
+  toast(`🎯 «${name}» → ${target.userData.label}`);
+}
+
+try{
+  const vvgChannel = new BroadcastChannel('vvg-channels');
+  vvgChannel.onmessage = (ev) => {
+    const d = ev.data;
+    if(!d || d.type !== 'vvg:apply-program') return;
+    try{ localStorage.removeItem('vvg_pending_program'); }catch(_){}
+    applyExternalProgram(d.xml, d.name);
+  };
+}catch(e){ console.warn('BroadcastChannel не поддерживается', e); }
+
+function checkPendingProgram(){
+  try{
+    const raw = localStorage.getItem('vvg_pending_program');
+    if(!raw) return;
+    localStorage.removeItem('vvg_pending_program');
+    const d = JSON.parse(raw);
+    if(d && d.type === 'vvg:apply-program') applyExternalProgram(d.xml, d.name);
+  }catch(_){}
+}
+window.addEventListener('storage', (e) => {
+  if(e.key !== 'vvg_pending_program' || !e.newValue) return;
+  try{ localStorage.removeItem('vvg_pending_program'); }catch(_){}
+  try{
+    const d = JSON.parse(e.newValue);
+    if(d && d.type === 'vvg:apply-program') applyExternalProgram(d.xml, d.name);
+  }catch(_){}
+});
+setTimeout(checkPendingProgram, 500);
 </script>
 <script>
 /* ==== GUIDE PANEL LOGIC ==== */
