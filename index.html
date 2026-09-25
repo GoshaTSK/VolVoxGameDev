@@ -2581,7 +2581,14 @@ function renderInspector(){
 function setColor(obj, hex){
   if(!hex) return;
   if(obj.userData && obj.userData.isCustom) return;
-  if(obj.userData && (obj.userData.isPlayer || obj.userData.isEnemy)) return;
+  // Универсальная защита: если у объекта больше 1 цвета — не перекрашиваем
+  const colors = new Set();
+  obj.traverse(o => {
+    if(o.isMesh && !o.userData._outline && o.material && o.material.color){
+      colors.add(o.material.color.getHexString());
+    }
+  });
+  if(colors.size > 1) return;
   const c = new THREE.Color(hex);
   obj.traverse(o => {
     if(o.isMesh && !o.userData._outline){
@@ -3431,7 +3438,7 @@ function serializeObject(o){
       else if(col !== c) multiColor = true;
     }
   });
-  if(multiColor || isCustom || o.userData.isPlayer || o.userData.isEnemy) col = null;
+  if(multiColor || isCustom) col = null;
   return {
     type: o.userData.type,
     x: o.position.x, y: o.position.z, z: o.position.y,
