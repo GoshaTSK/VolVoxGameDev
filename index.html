@@ -3449,6 +3449,7 @@ function saveProject(){
     underground: { depth: undergroundSettings.depth, texture: undergroundSettings.texture },
     objects3d: objectsByDim['3d'].map(serializeObject),
     objects2d: objectsByDim['2d'].map(serializeObject),
+    customModels: customModels,
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -3509,6 +3510,31 @@ function loadProjectData(data){
     if(selected) renderInspector();
   }
   ensureResize();
+    // Восстановить кастомные модели (merge — не удаляем существующие)
+  if(data.customModels && typeof data.customModels === 'object'){
+    let added = 0;
+    for(const id in data.customModels){
+      if(!customModels[id]){
+        customModels[id] = data.customModels[id];
+        added++;
+      }
+      if(!PALETTE.find(p => p.type === 'custom_' + id)){
+        PALETTE.push({
+          type: 'custom_' + id,
+          name: data.customModels[id].name,
+          icon: '★',
+          solid: true,
+          custom: true,
+        });
+      }
+    }
+    if(added > 0){
+      renderPalette();
+      saveCustomModelsToStorage();
+      toast(`★ Загружено моделей: ${added}`);
+    }
+  }
+
   toast(`📂 Проект загружен (${(data.objects3d||[]).length} 3D + ${(data.objects2d||[]).length} 2D)`);
 }
 
@@ -4638,6 +4664,7 @@ function modelerSaveToPalette(){
 
   const id = 'model_' + Date.now() + '_' + (++customModelCounter);
   customModels[id] = { name, parts };
+  saveCustomModelsToStorage();
 
   PALETTE.push({
     type: 'custom_' + id,
@@ -4649,6 +4676,35 @@ function modelerSaveToPalette(){
   renderPalette();
   toast(`✅ Модель «${name}» добавлена в палитру`);
   modelerClose();
+}
+
+  /* ========== CUSTOM MODELS PERSISTENCE ========== */
+function saveCustomModelsToStorage(){
+  try{
+    const data = { version: 1, models: customModels };
+    localStorage.setItem('vvg_custom_models', JSON.stringify(data));
+  }catch(e){ console.warn('saveCustomModels', e); }
+}
+function loadCustomModelsFromStorage(){
+  try{
+    const raw = localStorage.getItem('vvg_custom_models');
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    if(!data || !data.models) return;
+    Object.assign(customModels, data.models);
+    for(const id in data.models){
+      if(!PALETTE.find(p => p.type === 'custom_' + id)){
+        PALETTE.push({
+          type: 'custom_' + id,
+          name: data.models[id].name,
+          icon: '★',
+          solid: true,
+          custom: true,
+        });
+      }
+    }
+    renderPalette();
+  }catch(e){ console.warn('loadCustomModels', e); }
 }
 
 $('btnModeler').onclick = modelerOpen;
@@ -4673,6 +4729,7 @@ if(undergroundMesh) undergroundMesh.visible = false;
 resize();
 renderGamesGrid();
 updateEditToggle();
+loadCustomModelsFromStorage();
 buildDemo();
 animate();
 setTimeout(() => {
