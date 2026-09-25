@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VolVoxGameDev — Гайд по программированию</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<style>
+  :root{--bg:#070c16;--panel:#0f1a2e;--panel-2:#152340;--border:#22334f;
+    --text:#dbe6f6;--muted:#7c8fa9;--accent:#38bdf8;--accent-2:#8b5cf6}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg);color:var(--text);line-height:1.55;-webkit-font-smoothing:antialiased}
+  #layout{display:grid;grid-template-columns:290px 1fr;min-height:100vh}
+  aside{background:var(--panel);border-right:1px solid var(--border);
+    position:sticky;top:0;height:100vh;overflow-y:auto;padding:20px 0}
+  aside::-webkit-scrollbar{width:8px}
+  aside::-webkit-scrollbar-thumb{background:#1e2f4c;border-radius:4px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;
+    padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
+  .logo-mark{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;
+    font-size:18px;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    color:#04101f;box-shadow:0 0 20px rgba(56,189,248,.4);flex:none}
+  .logo > div:last-child{font-size:11px;color:var(--muted);font-weight:500}
+  #search{display:block;width:calc(100% - 32px);margin:0 16px 14px;
+    padding:9px 12px;background:#0a1424;border:1px solid var(--border);
+    border-radius:9px;color:#fff;font:inherit;font-size:12.5px;outline:none}
+  #search:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(56,189,248,.15)}
+  #search::placeholder{color:#5a6d87}
+  .nav-group{font-size:10px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;
+    color:var(--muted);padding:14px 20px 6px}
+  aside a{display:block;padding:6px 20px;color:#b8c8dd;text-decoration:none;
+    font-size:12.5px;border-left:2px solid transparent;transition:.12s}
+  aside a:hover{background:#16253f;color:#fff}
+  aside a.active{background:#1b3054;color:#fff;border-left-color:var(--accent)}
+  main{max-width:1000px;padding:32px 48px 80px;overflow-x:hidden}
+  h1{font-size:34px;font-weight:800;margin-bottom:8px;line-height:1.2}
+  h1 .emoji{font-size:38px;margin-right:6px}
+  h2{font-size:24px;font-weight:800;margin:56px 0 8px;padding-top:16px;
+    border-top:1px solid var(--border);display:flex;align-items:center;gap:12px}
+  h2 .icon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+    background:var(--panel-2);border:1px solid var(--border);font-size:18px;flex:none}
+  h3{font-size:17px;font-weight:700;margin:28px 0 10px;color:#fff}
+  h4{font-size:13px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;
+    color:var(--muted);margin:22px 0 10px}
+  p{margin-bottom:12px;color:#c5d3e3;font-size:14.5px}
+  ul,ol{margin:10px 0 14px 22px;color:#c5d3e3;font-size:14.5px}
+  li{margin-bottom:6px}
+  kbd{background:#0a1424;border:1px solid var(--border);border-radius:4px;
+    padding:1px 6px;font:700 11.5px ui-monospace,Menlo,monospace;color:#a5f3fc}
+  code{background:#0a1424;border:1px solid var(--border);border-radius:5px;
+    padding:2px 6px;font:600 12.5px ui-monospace,Menlo,monospace;color:#a5f3fc}
+  .lead{font-size:16px;color:#a9bcd4;margin-bottom:22px}
+  .muted{color:var(--muted);font-size:13px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;
+    padding:20px 22px;margin:14px 0}
+  .card.note{border-color:#6d28d9;background:linear-gradient(180deg,#1e1b4b,#0f1a2e)}
+  .card.warn{border-color:#b91c1c;background:linear-gradient(180deg,#3b0f0f,#0f1a2e)}
+  .card.tip{border-color:#166534;background:linear-gradient(180deg,#0a1f10,#0f1a2e)}
+  .card.info{border-color:#0e7490;background:linear-gradient(180deg,#0a1e28,#0f1a2e)}
+  .card .card-title{font-size:13px;font-weight:800;letter-spacing:1.2px;
+    text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .card.note .card-title{color:#c4b5fd}
+  .card.warn .card-title{color:#fca5a5}
+  .card.tip .card-title{color:#86efac}
+  .card.info .card-title{color:#7dd3fc}
+  .card p:last-child{margin-bottom:0}
+
+  .prog{background:#0c1728;border:1px solid var(--border);border-radius:14px;
+    padding:14px 16px 18px;margin:16px 0;overflow:hidden;position:relative}
+  .prog-title{font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;
+    color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .prog-title .num{background:var(--accent);color:#04101f;width:20px;height:20px;
+    border-radius:6px;display:grid;place-items:center;font-size:11px;flex:none}
+  .prog-title .spacer{flex:1}
+  .use-btn{font:inherit;font-size:11.5px;font-weight:800;padding:6px 14px;border-radius:8px;
+    cursor:pointer;background:linear-gradient(135deg,#22c55e,#16a34a);color:#04101f;
+    border:0;transition:.15s;display:flex;align-items:center;gap:6px}
+  .use-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(34,197,94,.4)}
+  .use-btn:active{transform:translateY(0)}
+  .use-btn.sent{background:linear-gradient(135deg,#0891b2,#06b6d4)}
+
+  /* ★ Контейнер для Blockly. Никаких display:none для внутренних элементов! */
+  .blockly-mini{width:100%;height:400px;background:#0a1424;border-radius:10px;
+    overflow:hidden;position:relative}
+  .blockly-mini .blocklySvg{background:#0a1424!important;border-radius:10px}
+  .blockly-mini .blocklyMainBackground{fill:#0a1424!important;stroke:#1a2a44!important;stroke-width:1!important}
+  .blockly-mini .blocklyGridPattern path{stroke:#152340!important}
+  .blockly-mini::before{content:'';position:absolute;inset:0;background:
+    repeating-linear-gradient(45deg,transparent,transparent 8px,rgba(56,189,248,.04) 8px,rgba(56,189,248,.04) 16px);
+    pointer-events:none;animation:loadPulse 1.5s ease-in-out infinite;z-index:0}
+  .blockly-mini.ready::before{display:none}
+  @keyframes loadPulse{0%,100%{opacity:.4}50%{opacity:.9}}
+
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--border)}
+  th{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
+    color:var(--muted);background:#0a1424}
+  tr:last-child td{border-bottom:0}
+  td code{font-size:12px}
+  tr:hover td{background:#0c1728}
+
+  .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10.5px;
+    font-weight:800;letter-spacing:.4px;text-transform:uppercase}
+  .tag.ok{background:#0a1f10;color:#86efac;border:1px solid #166534}
+  .tag.no{background:#3b0f0f;color:#fca5a5;border:1px solid #b91c1c}
+  .tag.new{background:#0a1e28;color:#7dd3fc;border:1px solid #0e7490}
+
+  #gtoast{position:fixed;left:50%;bottom:32px;transform:translateX(-50%) translateY(20px);
+    background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;
+    font-weight:800;font-size:13px;padding:12px 22px;border-radius:12px;
+    box-shadow:0 12px 32px rgba(0,0,0,.5);opacity:0;pointer-events:none;
+    transition:.25s;z-index:9999;white-space:nowrap;max-width:80vw;
+    overflow:hidden;text-overflow:ellipsis}
+  #gtoast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #gtoast.err{background:linear-gradient(135deg,#ef4444,#b91c1c)}
+
+  @media(max-width:900px){
+    #layout{grid-template-columns:1fr}
+    aside{position:static;height:auto;padding:12px 0;max-height:280px}
+    main{padding:24px 20px 60px}
+    h1{font-size:26px}
+    h2{font-size:20px}
+  }
+</style>
+</head>
+<body>
+<div id="layout">
+  <aside>
+    <div class="logo">
+      <div class="logo-mark">◈</div>
+      <div><b>VolVoxGameDev</b><br>Гайд по программированию</div>
+    </div>
+    <input id="search" type="search" placeholder="Поиск по гайду…">
+    <div class="nav-group">Основы</div>
+    <a href="#intro">Введение</a>
+    <a href="#anatomy">Анатомия программы</a>
+    <a href="#skeleton">Базовый скелет</a>
+    <a href="#blocks">Список блоков</a>
+    <div class="nav-group">Объекты</div>
+    <a href="#enemy">👹 Враг</a>
+    <a href="#coin">🪙 Монетка</a>
+    <a href="#heart">❤️ Сердечко</a>
+    <a href="#finish">🏁 Финиш</a>
+    <a href="#cloud">☁️ Облако</a>
+    <a href="#tree">🌲 Дерево</a>
+    <a href="#birch">🪾 Берёза</a>
+    <a href="#lamp">💡 Фонарь</a>
+    <a href="#door">🚪 Дверь</a>
+    <a href="#platform">⬜ Платформа</a>
+    <a href="#cube">🟦 Куб / ловушка</a>
+    <a href="#water">💧 Вода</a>
+    <a href="#lava">🔥 Лава</a>
+    <a href="#grass">🌿 Трава</a>
+    <div class="nav-group">Комбо</div>
+    <a href="#boss">👑 Босс</a>
+    <a href="#portal">🌀 Портал</a>
+    <a href="#turret">🔫 Турель</a>
+    <a href="#wave">🌊 Волна врагов</a>
+    <a href="#recipes">🍳 Рецепты</a>
+  </aside>
+
+  <main>
+    <h1><span class="emoji">🎮</span>Гайд по программированию</h1>
+    <p class="lead">Полный справочник: как собрать программу для любого объекта VolVoxGameDev. Все примеры — реальные блоки из игры. <b>Нажми «🎯 Использовать»</b> — программа уйдёт в открытую вкладку с игрой и применится к выделенному объекту.</p>
+
+    <div class="card info">
+      <div class="card-title">🚀 Как применить программу</div>
+      <p><b>1.</b> Открой игру в соседней вкладке: <code>index.html</code></p>
+      <p><b>2.</b> В игре выбери объект — тот, к которому хочешь применить программу</p>
+      <p><b>3.</b> Вернись сюда, найди нужную программу и нажми <b>🎯 Использовать</b></p>
+      <p><b>4.</b> Игра сама подхватит и подставит блоки</p>
+    </div>
+
+    <h2 id="intro"><span class="icon">💡</span>Введение</h2>
+    <p>Каждый объект в игре — это маленькая программа. Программа состоит из блоков: <b>событие</b> (когда что-то случилось) + <b>действия</b> (что делать).</p>
+    <div class="card info">
+      <div class="card-title">🎯 Три правила</div>
+      <p><b>1.</b> Любая программа начинается с шапки-события — жёлтый блок сверху.</p>
+      <p><b>2.</b> Чтобы действие повторялось — оберни его в <b>«повторять всегда»</b>.</p>
+      <p><b>3.</b> Чтобы не спамило — добавь <b>«ждать N»</b>. Иначе цикл крутится 60 раз/сек.</p>
+    </div>
+
+    <h2 id="anatomy"><span class="icon">🧩</span>Анатомия программы</h2>
+    <p>Минимальная программа — объект плавно едет вправо:</p>
+    <div class="prog">
+      <div class="prog-title">
+        <span class="num">★</span>Минимальный пример
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="minMove">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="minMove"></div>
+    </div>
+
+    <h2 id="skeleton"><span class="icon">🦴</span>Базовый скелет</h2>
+    <p>90% программ строятся по одной схеме. Заучи её — и собирай что угодно за 30 секунд.</p>
+    <div class="prog">
+      <div class="prog-title">
+        <span class="num">★</span>Универсальный шаблон
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="skeleton">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="skeleton"></div>
+    </div>
+    <p>Меняешь <b>условие</b> и <b>действие</b> — получаешь новое поведение.</p>
+
+    <h2 id="blocks"><span class="icon">📚</span>Список блоков</h2>
+    <h4>🏁 События</h4>
+    <table>
+      <tr><th>Блок</th><th>Когда сработает</th></tr>
+      <tr><td><code>когда 🏁 нажат</code></td><td>Один раз при старте игры</td></tr>
+      <tr><td><code>когда клавиша [X] нажата</code></td><td>В момент нажатия</td></tr>
+      <tr><td><code>когда игрок рядом</code></td><td>Один раз при входе в радиус 2.3</td></tr>
+      <tr><td><code>когда игрок касается</code></td><td>Один раз при касании (1.25)</td></tr>
+    </table>
+    <h4>🎮 Управление</h4>
+    <table>
+      <tr><th>Блок</th><th>Что делает</th></tr>
+      <tr><td><code>повторять всегда</code></td><td>Бесконечный цикл — основа 90% программ</td></tr>
+      <tr><td><code>повторить N раз</code></td><td>Цикл с известным числом повторов</td></tr>
+      <tr><td><code>если … то</code> / <code>если … то … иначе</code></td><td>Условие</td></tr>
+      <tr><td><code>ждать N</code></td><td>Пауза — обязательна внутри циклов</td></tr>
+      <tr><td><code>ждать до …</code></td><td>Стоит, пока условие не станет истинным</td></tr>
+    </table>
+    <h4>🏃 Движение</h4>
+    <table>
+      <tr><th>Блок</th><th>Эффект</th></tr>
+      <tr><td><code>идти N шагов</code></td><td>Сдвиг вперёд по «лицу»</td></tr>
+      <tr><td><code>повернуться в направлении N°</code></td><td>0° вправо · 90° вверх · 180° влево · 270° вниз</td></tr>
+      <tr><td><code>повернуть на N°</code></td><td>Плавный поворот</td></tr>
+      <tr><td><code>перейти в x/y</code>, <code>изменить x/y/высоту</code></td><td>Позиция</td></tr>
+      <tr><td><code>подпрыгнуть</code>, <code>парить</code>, <code>вращаться</code></td><td>Спец-движения</td></tr>
+    </table>
+    <h4>🎨 Внешность / 💥 Бой / 🎯 Игра / 👁 Сенсоры</h4>
+    <table>
+      <tr><th>Категория</th><th>Блоки</th></tr>
+      <tr><td>🎨 Внешность</td><td><code>сказать</code>, <code>изменить размер</code>, <code>показать/спрятать</code>, <code>случайный цвет</code></td></tr>
+      <tr><td>👁 Сенсоры</td><td><code>игрок рядом?</code>, <code>игрок касается?</code>, <code>расстояние</code>, <code>позиция x/y/высота</code>, <code>HP игрока</code>, <code>HP объекта</code>, <code>таймер</code>, <code>очки</code></td></tr>
+      <tr><td>💥 Бой</td><td><code>нанести урон</code>, <code>лечить</code>, <code>оттолкнуть</code>, <code>притянуть</code>, <code>выстрелить</code>, <code>телепортировать</code>, <code>получить урон</code></td></tr>
+      <tr><td>🎯 Игра</td><td><code>добавить очки</code>, <code>исчезнуть</code>, <code>изменить своё HP</code>, <code>невидимость</code>, <code>мигнуть</code>, <code>тряска</code>, <code>сообщение</code></td></tr>
+    </table>
+
+    <h2 id="enemy"><span class="icon">👹</span>Враг</h2>
+    <p>Базовый объект-противник. <span class="tag new">Программируется</span> — если написать свою программу, встроенный ИИ отключится.</p>
+
+    <h3>1. Патруль туда-обратно</h3>
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>Ходок — базовый враг
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="enemyPatrol">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="enemyPatrol"></div>
+    </div>
+
+    <h3>2. Преследователь</h3>
+    <div class="prog">
+      <div class="prog-title"><span class="num">2</span>Идёт за игроком
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="enemyChase">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="enemyChase"></div>
+    </div>
+
+    <h3>3. Турель</h3>
+    <div class="prog">
+      <div class="prog-title"><span class="num">3</span>Стреляет при подходе
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="enemyTurret">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="enemyTurret"></div>
+    </div>
+
+    <h3>4. Снайпер</h3>
+    <div class="prog">
+      <div class="prog-title"><span class="num">4</span>Дальний радиус 15
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="enemySniper">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="enemySniper"></div>
+    </div>
+
+    <h3>5. Прыгун</h3>
+    <div class="prog">
+      <div class="prog-title"><span class="num">5</span>Прыгает каждые 2 сек
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="enemyJumper">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="enemyJumper"></div>
+    </div>
+
+    <h3>6. Мигалка</h3>
+    <div class="prog">
+      <div class="prog-title"><span class="num">6</span>Сложно прицелиться
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="enemyBlink">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="enemyBlink"></div>
+    </div>
+
+    <h3>7. Умный враг</h3>
+    <div class="prog">
+      <div class="prog-title"><span class="num">7</span>Атакует близко, отходит далеко
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="enemySmart">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="enemySmart"></div>
+    </div>
+
+    <h2 id="coin"><span class="icon">🪙</span>Монетка</h2>
+
+    <h3>1. Даёт больше очков</h3>
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>+5 очков и исчезает
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="coinBonus">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="coinBonus"></div>
+    </div>
+
+    <h3>2. Убегающая монетка</h3>
+    <div class="prog">
+      <div class="prog-title"><span class="num">2</span>Убегает от робота
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="coinRun">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="coinRun"></div>
+    </div>
+
+    <h3>3. Обманка</h3>
+    <div class="prog">
+      <div class="prog-title"><span class="num">3</span>Внешне монетка, но отнимает HP
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="coinTrap">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="coinTrap"></div>
+    </div>
+
+    <h2 id="heart"><span class="icon">❤️</span>Сердечко</h2>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>Лечебный фонтан — +3 HP
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="heartFountain">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="heartFountain"></div>
+    </div>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">2</span>Периодическое сердечко
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="heartPulse">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="heartPulse"></div>
+    </div>
+
+    <h2 id="finish"><span class="icon">🏁</span>Финиш</h2>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>Финальный фейерверк
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="finishFirework">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="finishFirework"></div>
+    </div>
+
+    <h2 id="cloud"><span class="icon">☁️</span>Облако</h2>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>Дрейф вправо и обратно
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="cloudPatrol">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="cloudPatrol"></div>
+    </div>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">2</span>Лифтовая платформа
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="cloudElevator">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="cloudElevator"></div>
+    </div>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">3</span>Приветствие при подходе
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="cloudGreet">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="cloudGreet"></div>
+    </div>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">4</span>Пульсирующее облако
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="cloudPulse">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="cloudPulse"></div>
+    </div>
+
+    <h2 id="tree"><span class="icon">🌲</span>Дерево</h2>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>Качание на ветру
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="treeSway">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="treeSway"></div>
+    </div>
+
+    <h2 id="birch"><span class="icon">🪾</span>Берёза</h2>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>Шепчет при подходе
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="birchWhisper">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="birchWhisper"></div>
+    </div>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">2</span>Берёза-страж (стреляет)
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="birchGuard">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="birchGuard"></div>
+    </div>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">3</span>Дерево-аптечка
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="birchHeal">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="birchHeal"></div>
+    </div>
+
+    <h2 id="lamp"><span class="icon">💡</span>Фонарь</h2>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>Мигающий фонарь
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="lampBlink">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="lampBlink"></div>
+    </div>
+
+    <h2 id="door"><span class="icon">🚪</span>Дверь</h2>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>Дверь-ловушка
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="doorTrap">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="doorTrap"></div>
+    </div>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">2</span>Дверь-телепорт
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="doorPortal">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="doorPortal"></div>
+    </div>
+
+    <h2 id="platform"><span class="icon">⬜</span>Платформа / Пандус</h2>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>Лифт (вверх-вниз)
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="platformElevator">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="platformElevator"></div>
+    </div>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">2</span>Горизонтальный конвейер
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="platformConveyor">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="platformConveyor"></div>
+    </div>
+
+    <h2 id="cube"><span class="icon">🟦</span>Куб / ловушка</h2>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>Ловушка-капкан
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="cubeTrap">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="cubeTrap"></div>
+    </div>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">2</span>Взрывающийся куб
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="cubeBomb">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="cubeBomb"></div>
+    </div>
+
+    <h2 id="water"><span class="icon">💧</span>Вода</h2>
+    <div class="card tip"><div class="card-title">💡 Встроенное поведение</div>
+      <p>Вода уже «дышит». Программировать не обязательно.</p></div>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>Кислотный бассейн
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="waterAcid">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="waterAcid"></div>
+    </div>
+
+    <h2 id="lava"><span class="icon">🔥</span>Лава</h2>
+    <p>Уже наносит 1 урон раз в секунду при касании.</p>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>Лавовый гейзер
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="lavaGeyser">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="lavaGeyser"></div>
+    </div>
+
+    <h2 id="grass"><span class="icon">🌿</span>Трава</h2>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>Реактивная трава
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="grassReact">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="grassReact"></div>
+    </div>
+
+    <h2 id="boss"><span class="icon">👑</span>Многофазный босс</h2>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">★</span>Три фазы по HP
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="bossPhases">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="bossPhases"></div>
+    </div>
+    <p class="muted">В инспекторе: HP: 10, «Неуязвимый» выключен.</p>
+
+    <h2 id="portal"><span class="icon">🌀</span>Портал</h2>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">★</span>Телепорт + тряска + сообщение
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="portalCombo">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="portalCombo"></div>
+    </div>
+
+    <h2 id="turret"><span class="icon">🔫</span>Турель-полигон</h2>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">1</span>Турель врага
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="turretEnemy">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="turretEnemy"></div>
+    </div>
+
+    <h2 id="wave"><span class="icon">🌊</span>Волна врагов</h2>
+
+    <div class="prog">
+      <div class="prog-title"><span class="num">★</span>Волна через задержку
+        <span class="spacer"></span>
+        <button class="use-btn" data-prog="waveDelay">🎯 Использовать</button>
+      </div>
+      <div class="blockly-mini" data-prog="waveDelay"></div>
+    </div>
+
+    <h2 id="recipes"><span class="icon">🍳</span>Универсальные рецепты</h2>
+    <table>
+      <tr><th>Хочешь…</th><th>Что собрать</th></tr>
+      <tr><td>Мигание</td><td><code>показать/спрятать</code> + <code>ждать 0.3</code> в цикле</td></tr>
+      <tr><td>Пульсация</td><td><code>изменить размер на +10%</code> → <code>ждать</code> → <code>на -10%</code></td></tr>
+      <tr><td>Дрожь</td><td><code>изменить x на 0.05</code> → <code>на -0.05</code> в цикле</td></tr>
+      <tr><td>Погоня</td><td><code>если игрок рядом?</code> → <code>идти 0.1</code></td></tr>
+      <tr><td>Патруль</td><td><code>если x &gt; 5 → повернуть 180°</code> и обратно</td></tr>
+      <tr><td>Снайпер</td><td><code>расстояние &lt; 15</code> → <code>выстрелить</code></td></tr>
+      <tr><td>Ловушка</td><td><code>касается?</code> → <code>урон + оттолкнуть</code></td></tr>
+      <tr><td>Лечилка</td><td><code>лечить игрока на 2</code> при касании</td></tr>
+      <tr><td>Портал</td><td><code>тряска + телепорт + сообщение</code></td></tr>
+    </table>
+
+    <div class="card tip" style="margin-top:30px">
+      <div class="card-title">✅ Готово</div>
+      <p>Все программы — рабочие. Жми <b>🎯 Использовать</b> и смотри, как блоки оказываются в редакторе игры.</p>
+    </div>
+  </main>
+</div>
+
+<div id="gtoast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/blockly@10.4.3/blockly.min.js"></script>
+<script>
+/* ============== BLOCK DEFINITIONS ============== */
+Blockly.defineBlocksWithJsonArray([
+  {type:'event_flag', message0:'когда 🏁 нажат', colour:'#FFBF00', nextStatement:null},
+  {type:'event_key', message0:'когда клавиша %1 нажата',
+   args0:[{type:'field_dropdown',name:'KEY',options:[['пробел','Space'],['вверх','ArrowUp'],['вниз','ArrowDown'],['влево','ArrowLeft'],['вправо','ArrowRight'],['W','KeyW'],['A','KeyA'],['S','KeyS'],['D','KeyD']]}],
+   colour:'#FFBF00', nextStatement:null},
+  {type:'event_near', message0:'когда игрок рядом', colour:'#FFBF00', nextStatement:null},
+  {type:'event_touch', message0:'когда игрок касается', colour:'#FFBF00', nextStatement:null},
+  {type:'control_forever', message0:'повторять всегда %1 %2',
+   args0:[{type:'input_dummy'},{type:'input_statement',name:'BODY'}],
+   colour:'#FFAB19', previousStatement:null, nextStatement:null},
+  {type:'control_repeat', message0:'повторить %1 раз %2 %3',
+   args0:[{type:'input_value',name:'N',check:'Number'},{type:'input_dummy'},{type:'input_statement',name:'BODY'}],
+   colour:'#FFAB19', previousStatement:null, nextStatement:null},
+  {type:'control_if', message0:'если %1 то %2 %3',
+   args0:[{type:'input_value',name:'COND',check:'Boolean'},{type:'input_dummy'},{type:'input_statement',name:'BODY'}],
+   colour:'#FFAB19', previousStatement:null, nextStatement:null},
+  {type:'control_if_else', message0:'если %1 то %2 %3 иначе %4 %5',
+   args0:[{type:'input_value',name:'COND',check:'Boolean'},{type:'input_dummy'},{type:'input_statement',name:'BODY'},{type:'input_dummy'},{type:'input_statement',name:'ELSE'}],
+   colour:'#FFAB19', previousStatement:null, nextStatement:null},
+  {type:'control_wait', message0:'ждать %1 секунд',
+   args0:[{type:'input_value',name:'N',check:'Number'}],
+   colour:'#FFAB19', previousStatement:null, nextStatement:null},
+  {type:'control_wait_until', message0:'ждать до %1',
+   args0:[{type:'input_value',name:'COND',check:'Boolean'}],
+   colour:'#FFAB19', previousStatement:null, nextStatement:null},
+  {type:'motion_move', message0:'идти %1 шагов',
+   args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#4C97FF', previousStatement:null, nextStatement:null},
+  {type:'motion_point_dir', message0:'повернуться в направлении %1°',
+   args0:[{type:'input_value',name:'D',check:'Number'}], colour:'#4C97FF', previousStatement:null, nextStatement:null},
+  {type:'motion_turn', message0:'повернуть на %1°',
+   args0:[{type:'input_value',name:'D',check:'Number'}], colour:'#4C97FF', previousStatement:null, nextStatement:null},
+  {type:'motion_goto_xy', message0:'перейти в x: %1 y: %2',
+   args0:[{type:'input_value',name:'X',check:'Number'},{type:'input_value',name:'Y',check:'Number'}],
+   colour:'#4C97FF', previousStatement:null, nextStatement:null},
+  {type:'motion_change_x', message0:'изменить x на %1',
+   args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#4C97FF', previousStatement:null, nextStatement:null},
+  {type:'motion_change_y', message0:'изменить y на %1',
+   args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#4C97FF', previousStatement:null, nextStatement:null},
+  {type:'motion_change_z', message0:'изменить высоту на %1',
+   args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#4C97FF', previousStatement:null, nextStatement:null},
+  {type:'motion_bounce', message0:'подпрыгнуть на %1',
+   args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#4C97FF', previousStatement:null, nextStatement:null},
+  {type:'motion_float', message0:'парить', colour:'#4C97FF', previousStatement:null, nextStatement:null},
+  {type:'motion_unfloat', message0:'перестать парить', colour:'#4C97FF', previousStatement:null, nextStatement:null},
+  {type:'motion_spin', message0:'вращаться', colour:'#4C97FF', previousStatement:null, nextStatement:null},
+  {type:'looks_say', message0:'сказать %1',
+   args0:[{type:'input_value',name:'T',check:'String'}], colour:'#9966FF', previousStatement:null, nextStatement:null},
+  {type:'looks_change_size', message0:'изменить размер на %1 %',
+   args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#9966FF', previousStatement:null, nextStatement:null},
+  {type:'looks_show', message0:'показать', colour:'#9966FF', previousStatement:null, nextStatement:null},
+  {type:'looks_hide', message0:'спрятать', colour:'#9966FF', previousStatement:null, nextStatement:null},
+  {type:'looks_recolor', message0:'случайный цвет', colour:'#9966FF', previousStatement:null, nextStatement:null},
+  {type:'sensing_keypressed', message0:'клавиша %1 нажата?',
+   args0:[{type:'field_dropdown',name:'KEY',options:[['пробел','Space'],['вверх','ArrowUp'],['вниз','ArrowDown'],['влево','ArrowLeft'],['вправо','ArrowRight'],['W','KeyW'],['A','KeyA'],['S','KeyS'],['D','KeyD']]}],
+   colour:'#5CB1D6', output:'Boolean'},
+  {type:'sensing_near', message0:'игрок рядом?', colour:'#5CB1D6', output:'Boolean'},
+  {type:'sensing_touch', message0:'игрок касается?', colour:'#5CB1D6', output:'Boolean'},
+  {type:'sensing_dist', message0:'расстояние до игрока', colour:'#5CB1D6', output:'Number'},
+  {type:'sensing_pos', message0:'позиция %1',
+   args0:[{type:'field_dropdown',name:'AXIS',options:[['x','x'],['y','y'],['высота','z']]}],
+   colour:'#5CB1D6', output:'Number'},
+  {type:'sensing_timer', message0:'таймер', colour:'#5CB1D6', output:'Number'},
+  {type:'sensing_score', message0:'очки', colour:'#5CB1D6', output:'Number'},
+  {type:'sensing_player_hp', message0:'❤️ HP игрока', colour:'#5CB1D6', output:'Number'},
+  {type:'sensing_self_hp', message0:'HP объекта', colour:'#5CB1D6', output:'Number'},
+  {type:'op_add', message0:'%1 + %2', args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'Number'},
+  {type:'op_sub', message0:'%1 − %2', args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'Number'},
+  {type:'op_mul', message0:'%1 × %2', args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'Number'},
+  {type:'op_div', message0:'%1 ÷ %2', args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'Number'},
+  {type:'op_lt', message0:'%1 < %2', args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'Boolean'},
+  {type:'op_gt', message0:'%1 > %2', args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'Boolean'},
+  {type:'op_eq', message0:'%1 = %2', args0:[{type:'input_value',name:'A'},{type:'input_value',name:'B'}], colour:'#59C059', output:'Boolean'},
+  {type:'op_and', message0:'%1 и %2', args0:[{type:'input_value',name:'A',check:'Boolean'},{type:'input_value',name:'B',check:'Boolean'}], colour:'#59C059', output:'Boolean'},
+  {type:'op_or',  message0:'%1 или %2', args0:[{type:'input_value',name:'A',check:'Boolean'},{type:'input_value',name:'B',check:'Boolean'}], colour:'#59C059', output:'Boolean'},
+  {type:'op_not', message0:'не %1', args0:[{type:'input_value',name:'A',check:'Boolean'}], colour:'#59C059', output:'Boolean'},
+  {type:'op_random', message0:'случайное от %1 до %2',
+   args0:[{type:'input_value',name:'A',check:'Number'},{type:'input_value',name:'B',check:'Number'}],
+   colour:'#59C059', output:'Number'},
+  {type:'combat_damage_player', message0:'нанести игроку %1 урона',
+   args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF3355', previousStatement:null, nextStatement:null},
+  {type:'combat_heal_player', message0:'лечить игрока на %1',
+   args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF3355', previousStatement:null, nextStatement:null},
+  {type:'combat_push_player', message0:'оттолкнуть игрока на %1',
+   args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF3355', previousStatement:null, nextStatement:null},
+  {type:'combat_pull_player', message0:'притянуть игрока к себе на %1',
+   args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF3355', previousStatement:null, nextStatement:null},
+  {type:'combat_shoot_player', message0:'выстрелить в игрока', colour:'#FF3355', previousStatement:null, nextStatement:null},
+  {type:'combat_teleport_player', message0:'телепортировать игрока в x:%1 y:%2',
+   args0:[{type:'input_value',name:'X',check:'Number'},{type:'input_value',name:'Y',check:'Number'}],
+   colour:'#FF3355', previousStatement:null, nextStatement:null},
+  {type:'combat_damage_self', message0:'получить %1 урона',
+   args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF3355', previousStatement:null, nextStatement:null},
+  {type:'game_score', message0:'добавить %1 очков',
+   args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF6680', previousStatement:null, nextStatement:null},
+  {type:'game_disappear', message0:'исчезнуть', colour:'#FF6680', previousStatement:null, nextStatement:null},
+  {type:'game_heal_self', message0:'изменить своё HP на %1',
+   args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF6680', previousStatement:null, nextStatement:null},
+  {type:'game_set_invisible', message0:'стать невидимым', colour:'#FF6680', previousStatement:null, nextStatement:null},
+  {type:'game_set_visible', message0:'стать видимым', colour:'#FF6680', previousStatement:null, nextStatement:null},
+  {type:'game_blink', message0:'мигнуть %1 раз',
+   args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF6680', previousStatement:null, nextStatement:null},
+  {type:'game_shake', message0:'тряска экрана сила %1',
+   args0:[{type:'input_value',name:'POWER',check:'Number'}], colour:'#FF6680', previousStatement:null, nextStatement:null},
+  {type:'game_message', message0:'показать сообщение %1',
+   args0:[{type:'input_value',name:'T',check:'String'}], colour:'#FF6680', previousStatement:null, nextStatement:null},
+]);
+
+/* ============== Mini-DSL ============== */
+const num = n => ({shadow:'math_number', fields:{NUM:n}});
+const txt = t => ({shadow:'text', fields:{TEXT:t}});
+const XML_NS = 'https://developers.google.com/blockly/xml';
+
+const toXml = n => {
+  if(!n) return '';
+  if(n.shadow){
+    let x = `<shadow type="${n.shadow}">`;
+    for(const k in (n.fields||{})) x += `<field name="${k}">${n.fields[k]}</field>`;
+    return x + '</shadow>';
+  }
+  let x = `<block type="${n.type}">`;
+  if(n.f) for(const k in n.f) x += `<field name="${k}">${n.f[k]}</field>`;
+  if(n.i) for(const k in n.i) x += `<value name="${k}">${toXml(n.i[k])}</value>`;
+  if(n.s) for(const k in n.s) x += `<statement name="${k}">${toXml(n.s[k])}</statement>`;
+  if(n.next) x += `<next>${toXml(n.next)}</next>`;
+  return x + '</block>';
+};
+const chain = (...blocks) => {
+  for(let i = 0; i < blocks.length - 1; i++) blocks[i].next = blocks[i+1];
+  return blocks[0];
+};
+const flag = next => ({type:'event_flag', next});
+const forever = body => ({type:'control_forever', s:{BODY: body}});
+const repeat = (n, body) => ({type:'control_repeat', i:{N: num(n)}, s:{BODY: body}});
+const ifThen = (cond, body) => ({type:'control_if', i:{COND: cond}, s:{BODY: body}});
+const ifElse = (cond, b, e) => ({type:'control_if_else', i:{COND: cond}, s:{BODY:b, ELSE:e}});
+const wait = n => ({type:'control_wait', i:{N: num(n)}});
+const waitUntil = cond => ({type:'control_wait_until', i:{COND: cond}});
+const move = n => ({type:'motion_move', i:{N: num(n)}});
+const pointDir = d => ({type:'motion_point_dir', i:{D: num(d)}});
+const turn = d => ({type:'motion_turn', i:{D: num(d)}});
+const changeX = n => ({type:'motion_change_x', i:{N: num(n)}});
+const changeY = n => ({type:'motion_change_y', i:{N: num(n)}});
+const changeZ = n => ({type:'motion_change_z', i:{N: num(n)}});
+const bounce = n => ({type:'motion_bounce', i:{N: num(n)}});
+const floatB = () => ({type:'motion_float'});
+const unfloat = () => ({type:'motion_unfloat'});
+const spin = () => ({type:'motion_spin'});
+const say = t => ({type:'looks_say', i:{T: txt(t)}});
+const changeSize = n => ({type:'looks_change_size', i:{N: num(n)}});
+const show = () => ({type:'looks_show'});
+const hide = () => ({type:'looks_hide'});
+const recolor = () => ({type:'looks_recolor'});
+const near = () => ({type:'sensing_near'});
+const touch = () => ({type:'sensing_touch'});
+const dist = () => ({type:'sensing_dist'});
+const posX = () => ({type:'sensing_pos', f:{AXIS:'x'}});
+const posY = () => ({type:'sensing_pos', f:{AXIS:'y'}});
+const posZ = () => ({type:'sensing_pos', f:{AXIS:'z'}});
+const selfHp = () => ({type:'sensing_self_hp'});
+const playerHp = () => ({type:'sensing_player_hp'});
+const keyB = k => ({type:'sensing_keypressed', f:{KEY: k}});
+const timerB = () => ({type:'sensing_timer'});
+const scoreB = () => ({type:'sensing_score'});
+const lt = (a, b) => ({type:'op_lt', i:{A:a, B: typeof b === 'number' ? num(b) : b}});
+const gt = (a, b) => ({type:'op_gt', i:{A:a, B: typeof b === 'number' ? num(b) : b}});
+const eq = (a, b) => ({type:'op_eq', i:{A:a, B: typeof b === 'number' ? num(b) : b}});
+const and = (a, b) => ({type:'op_and', i:{A:a, B:b}});
+const or = (a, b) => ({type:'op_or', i:{A:a, B:b}});
+const notB = a => ({type:'op_not', i:{A:a}});
+const dmgP = n => ({type:'combat_damage_player', i:{N: num(n)}});
+const healP = n => ({type:'combat_heal_player', i:{N: num(n)}});
+const pushP = n => ({type:'combat_push_player', i:{N: num(n)}});
+const pullP = n => ({type:'combat_pull_player', i:{N: num(n)}});
+const shoot = () => ({type:'combat_shoot_player'});
+const tpP = (x, y) => ({type:'combat_teleport_player', i:{X: num(x), Y: num(y)}});
+const dmgSelf = n => ({type:'combat_damage_self', i:{N: num(n)}});
+const addScore = n => ({type:'game_score', i:{N: num(n)}});
+const disappear = () => ({type:'game_disappear'});
+const healSelf = n => ({type:'game_heal_self', i:{N: num(n)}});
+const invis = () => ({type:'game_set_invisible'});
+const vis = () => ({type:'game_set_visible'});
+const blink = n => ({type:'game_blink', i:{N: num(n)}});
+const shake = p => ({type:'game_shake', i:{POWER: num(p)}});
+const msg = t => ({type:'game_message', i:{T: txt(t)}});
+
+/* ============== ПРОГРАММЫ ============== */
+const PROGS = {
+  minMove: () => flag(forever(chain(changeX(0.1), wait(0.05)))),
+  skeleton: () => flag(forever(ifThen(near(), chain(move(0.1), wait(0.5))))),
+  enemyPatrol: () => flag(chain(
+    pointDir(180),
+    forever(chain(move(0.05),
+      ifThen(lt(posX(), 3), pointDir(0)),
+      ifThen(gt(posX(), 12), pointDir(180))))
+  )),
+  enemyChase: () => flag(forever(chain(
+    ifThen(near(), chain(pointDir(180), move(0.1))),
+    wait(0.05)))),
+  enemyTurret: () => flag(forever(chain(
+    ifThen(near(), chain(shoot(), wait(1))),
+    wait(0.2)))),
+  enemySniper: () => flag(forever(chain(
+    ifThen(lt(dist(), 15), shoot()),
+    wait(1.5)))),
+  enemyJumper: () => flag(forever(chain(bounce(8), wait(2)))),
+  enemyBlink: () => flag(forever(chain(blink(1), wait(0.8)))),
+  enemySmart: () => flag(forever(chain(
+    ifThen(gt(dist(), 3), move(0.1)),
+    ifThen(lt(dist(), 1.5), chain(pushP(3), dmgP(1))),
+    wait(0.5)))),
+  coinBonus: () => ({type:'event_touch', next: chain(addScore(5), say('+5!'), disappear())}),
+  coinRun: () => ({type:'event_near', next: chain(changeX(2), recolor())}),
+  coinTrap: () => ({type:'event_touch', next: chain(dmgP(1), shake(2), say('Обманка!'), disappear())}),
+  heartFountain: () => ({type:'event_touch', next: chain(healP(3), say('Живи!'), disappear())}),
+  heartPulse: () => flag(forever(chain(blink(1), changeSize(20), wait(0.3), changeSize(-20), wait(3)))),
+  finishFirework: () => ({type:'event_touch', next: chain(shake(4), msg('Победа!'), recolor(), wait(1), recolor())}),
+  cloudPatrol: () => flag(chain(pointDir(0), forever(chain(move(0.03),
+    ifThen(gt(posX(), 25), pointDir(180)),
+    ifThen(lt(posX(), 5), pointDir(0)))))),
+  cloudElevator: () => flag(forever(chain(changeZ(0.5), wait(0.4), changeZ(-0.5), wait(0.4)))),
+  cloudGreet: () => ({type:'event_near', next: chain(say('Привет!'), changeSize(10), wait(0.3), changeSize(-10))}),
+  cloudPulse: () => flag(forever(chain(changeSize(2), wait(0.4), changeSize(-2), wait(0.4)))),
+  treeSway: () => flag(forever(chain(turn(1), wait(0.05), turn(-2), wait(0.05), turn(1)))),
+  birchWhisper: () => ({type:'event_near', next: chain(say('шшш…'), changeSize(5), wait(0.1), changeSize(-5))}),
+  birchGuard: () => flag(forever(chain(
+    ifThen(near(), chain(shoot(), wait(1.5))),
+    wait(0.3)))),
+  birchHeal: () => ({type:'event_touch', next: chain(healP(2), msg('Сила леса!'), changeSize(30), wait(0.3), changeSize(-30))}),
+  lampBlink: () => flag(forever(chain(invis(), wait(0.2), vis(), wait(0.8)))),
+  doorTrap: () => ({type:'event_touch', next: chain(dmgP(1), shake(3), recolor())}),
+  doorPortal: () => ({type:'event_touch', next: chain(tpP(20, 0), msg('Смена комнаты'), shake(2))}),
+  platformElevator: () => flag(forever(chain(changeZ(0.08), wait(0.4), changeZ(-0.08), wait(0.4)))),
+  platformConveyor: () => flag(forever(chain(changeX(0.1), wait(0.5), changeX(-0.1), wait(0.5)))),
+  cubeTrap: () => ({type:'event_touch', next: chain(dmgP(2), pushP(5), shake(3), disappear())}),
+  cubeBomb: () => flag(chain(repeat(3, chain(blink(1), wait(0.2))), shake(5), disappear())),
+  waterAcid: () => ({type:'event_touch', next: chain(dmgP(1), pushP(4), recolor())}),
+  lavaGeyser: () => flag(forever(chain(bounce(10), wait(2)))),
+  grassReact: () => ({type:'event_near', next: chain(turn(15), wait(0.3), turn(-15))}),
+  bossPhases: () => flag(forever(chain(
+    ifThen(gt(selfHp(), 7), chain(shoot(), wait(2))),
+    ifThen(and(lt(selfHp(), 8), gt(selfHp(), 3)), chain(shoot(), shoot(), msg('Я злюсь!'), wait(1))),
+    ifThen(lt(selfHp(), 4), chain(shake(3), shoot(), shoot(), shoot(), wait(0.5))),
+    wait(0.2)))),
+  portalCombo: () => ({type:'event_touch', next: chain(msg('Телепорт!'), shake(3), tpP(20, 0), wait(2))}),
+  turretEnemy: () => flag(forever(chain(
+    ifThen(near(), chain(shoot(), wait(1))),
+    wait(0.2)))),
+  waveDelay: () => flag(chain(wait(3), pointDir(0), forever(chain(move(0.15), wait(0.1))))),
+};
+
+/* ============== LAZY INIT + BROADCAST ============== */
+const channel = (typeof BroadcastChannel !== 'undefined')
+  ? new BroadcastChannel('vvg-channels') : null;
+
+const workspaces = {};
+
+function showToast(msg, err){
+  const el = document.getElementById('gtoast');
+  if(!el) return;
+  el.textContent = msg;
+  el.className = err ? 'show err' : 'show';
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ★ Подгонка вьюпорта — БЕЗ setScale, все значения проверяются на NaN */
+function fitWorkspace(ws, container){
+  if(!ws || !container || !container.isConnected) return false;
+
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+  if(!cw || !ch || cw < 50 || ch < 50) return false;
+
+  const svg = container.querySelector('svg.blocklySvg');
+  if(!svg) return false;
+
+  const top = ws.getTopBlocks(true);
+  if(!top || !top.length) return false;
+
+  // Раскладываем блоки с защитой от NaN
+  if(top.length === 1){
+    const b = top[0];
+    const cur = b.getRelativeToSurfaceXY();
+    if(isFinite(cur.x) && isFinite(cur.y)){
+      b.moveBy(20 - cur.x, 20 - cur.y);
+    }
+  } else {
+    let y = 20;
+    for(const b of top){
+      const cur = b.getRelativeToSurfaceXY();
+      if(!isFinite(cur.x) || !isFinite(cur.y)) continue;
+      b.moveBy(20 - cur.x, y - cur.y);
+      const r = b.getBoundingRectangle();
+      if(!r || !isFinite(r.height) || r.height <= 0) continue;
+      y += r.height + 20;
+    }
+  }
+
+  // bbox — с проверками на валидность
+  const bbox = ws.getBlocksBoundingBox();
+  if(!bbox) return false;
+  if(!isFinite(bbox.x) || !isFinite(bbox.y)) return false;
+  if(!isFinite(bbox.width) || !isFinite(bbox.height)) return false;
+  if(bbox.width <= 0 || bbox.height <= 0) return false;
+
+  // Высота контейнера = высоте контента + отступ
+  const newH = Math.max(200, Math.ceil(bbox.height + 60));
+  if(container.style.height !== (newH + 'px')){
+    container.style.height = newH + 'px';
+    try{ Blockly.svgResize(ws); }catch(_){}
+  }
+
+  // scroll — только с валидными числами
+  const sx = bbox.x - 30;
+  const sy = bbox.y - 30;
+  if(isFinite(sx) && isFinite(sy)){
+    try{ ws.scroll(sx, sy); }catch(_){}
+  }
+
+  return true;
+}
+
+function initWorkspace(name, container){
+  if(workspaces[name]) return;
+
+  // Guard: ждём пока контейнер получит реальные размеры
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  if(!w || !h || w < 50 || h < 50){
+    setTimeout(() => initWorkspace(name, container), 120);
+    return;
+  }
+
+  let ws;
+  try{
+    ws = Blockly.inject(container, {
+      readOnly: true,
+      renderer: 'zelos',
+      grid: { spacing: 22, length: 3, colour: '#152340', snap: false },
+      move: { scrollbars: false, drag: false, wheel: false },
+      zoom: { controls: false, wheel: false, startScale: 1, minScale: 1, maxScale: 1 },
+      trashcan: false,
+      media: 'https://cdn.jsdelivr.net/npm/blockly@10.4.3/media/',
+    });
+  }catch(e){
+    console.warn('inject failed for', name, e);
+    container.classList.add('ready');
+    return;
+  }
+
+  // Сразу после inject даём svg получить размеры
+  try{ Blockly.svgResize(ws); }catch(_){}
+
+  workspaces[name] = ws;
+
+  const gen = PROGS[name];
+  if(!gen){ container.classList.add('ready'); return; }
+  const result = gen();
+  const blocksArray = Array.isArray(result) ? result : [result];
+
+  const xmlParts = blocksArray.map(b => toXml(b));
+  const xml = `<xml xmlns="${XML_NS}">${xmlParts.join('')}</xml>`;
+
+  try{
+    const dom = Blockly.utils.xml.textToDom(xml);
+    Blockly.Xml.domToWorkspace(dom, ws);
+  }catch(e){ console.warn('inject failed for', name, e); }
+
+  // Многоуровневая подгонка
+  let fitCount = 0;
+  const tryFit = () => {
+    try{
+      const ok = fitWorkspace(ws, container);
+      fitCount++;
+      if(ok && fitCount >= 2){
+        container.classList.add('ready');
+      }
+    }catch(e){ console.warn('fit', name, e); }
+  };
+  [50, 200, 500, 1000, 2000].forEach(d => setTimeout(tryFit, d));
+}
+
+function applyProgram(name){
+  const ws = workspaces[name];
+  if(!ws){ showToast('Программа ещё не загружена', true); return; }
+
+  let xml = '';
+  try{
+    const dom = Blockly.Xml.workspaceToDom(ws);
+    xml = Blockly.Xml.domToText(dom);
+  }catch(e){ showToast('Ошибка сериализации', true); return; }
+
+  const payload = {
+    type: 'vvg:apply-program',
+    name: name,
+    xml,
+    ts: Date.now(),
+  };
+
+  if(channel){
+    try{
+      channel.postMessage(payload);
+      try{ localStorage.setItem('vvg_pending_program', JSON.stringify(payload)); }catch(_){}
+      showToast('✅ Отправлено в игру: ' + name);
+      return;
+    }catch(e){ console.warn(e); }
+  }
+
+  try{
+    localStorage.setItem('vvg_pending_program', JSON.stringify(payload));
+    showToast('💾 Сохранено в браузере (открой игру)');
+  }catch(e){
+    showToast('❌ Не удалось передать', true);
+  }
+}
+
+/* ============== INIT ============== */
+window.addEventListener('load', () => {
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){
+        const el = entry.target;
+        const name = el.dataset.prog;
+        if(name){
+          initWorkspace(name, el);
+          io.unobserve(el);
+        }
+      }
+    });
+  }, { rootMargin: '300px 0px' });
+
+  document.querySelectorAll('.blockly-mini').forEach(el => io.observe(el));
+
+  document.querySelectorAll('.use-btn').forEach(btn => {
+    btn.onclick = () => {
+      applyProgram(btn.dataset.prog);
+      btn.classList.add('sent');
+      const old = btn.textContent;
+      btn.textContent = '✓ Отправлено';
+      setTimeout(() => {
+        btn.classList.remove('sent');
+        btn.textContent = old;
+      }, 1800);
+    };
+  });
+
+  const links = document.querySelectorAll('aside a');
+  const sections = [...links].map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  const updateActive = () => {
+    const y = window.scrollY + 120;
+    let current = sections[0];
+    for(const s of sections){ if(s.offsetTop <= y) current = s; }
+    links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + (current?.id || '')));
+  };
+  window.addEventListener('scroll', updateActive, { passive:true });
+  updateActive();
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      for(const name in workspaces){
+        const ws = workspaces[name];
+        const container = document.querySelector(`.blockly-mini[data-prog="${name}"]`);
+        if(ws && container){
+          try{ fitWorkspace(ws, container); }catch(_){}
+        }
+      }
+    }, 200);
+  });
+
+  const searchInput = document.getElementById('search');
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    document.querySelectorAll('main h2, main h3, main h4, main .prog, main .card, main table').forEach(el => {
+      if(!q){ el.style.display = ''; return; }
+      const t = el.textContent.toLowerCase();
+      el.style.display = t.includes(q) ? '' : 'none';
+    });
+  });
+});
+</script>
+</body>
+</html>
