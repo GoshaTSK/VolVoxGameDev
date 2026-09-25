@@ -368,7 +368,45 @@
   .blocks-head h3{font-size:12.5px;font-weight:700}
   .blocks-head h3 em{font-style:normal;color:var(--accent)}
   #blocklyDiv{flex:1;width:100%;min-height:0;min-width:0}
-  #blocklyDiv .blocklyToolboxDiv{background:#0c1728!important;border-right:1px solid var(--border)}
+    #blocklyDiv .blocklyToolboxDiv{
+    background:#0c1728!important;
+    border-right:1px solid var(--border);
+    min-width:210px!important;
+    max-width:210px!important;
+    padding:6px 0!important;
+  }
+  #blocklyDiv .blocklyTreeRow{
+    padding:8px 12px!important;
+    margin:2px 8px!important;
+    border-radius:8px!important;
+    height:auto!important;
+    line-height:1.5!important;
+    display:flex!important;
+    align-items:center!important;
+    gap:8px!important;
+  }
+  #blocklyDiv .blocklyTreeLabel{
+    font-family:'Inter',sans-serif!important;
+    font-size:13px!important;
+    font-weight:600!important;
+    color:#dbe6f6!important;
+    line-height:1.5!important;
+    vertical-align:middle!important;
+    overflow:visible!important;
+  }
+  #blocklyDiv .blocklyTreeIcon,
+  #blocklyDiv .blocklyTreeIconNone{
+    width:18px!important;
+    height:18px!important;
+    margin-right:4px!important;
+    background-size:18px 18px!important;
+  }
+  #blocklyDiv .blocklyTreeRow:hover{
+    background:#16253f!important;
+  }
+  #blocklyDiv .blocklyTreeSelected{
+    background:#1b3054!important;
+  }
   #blocklyDiv .blocklyTreeRow{padding:6px 4px!important;border-radius:8px;margin:2px 4px}
   #blocklyDiv .blocklyTreeLabel{font-family:'Inter',sans-serif!important;font-size:12.5px!important;font-weight:600}
   #blocklyDiv .blocklyFlyout{background:#0f1a2e}
