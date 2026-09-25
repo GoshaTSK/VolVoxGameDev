@@ -5,34 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VolVoxGameDev</title>
 <style>
-  /* ==== GUIDE PANEL ==== */
-.guide-panel{position:fixed;z-index:150;right:20px;top:70px;
-  width:min(900px, 85vw);height:min(85vh, 900px);
-  background:#0f1a2e;border:1px solid var(--border);border-radius:14px;
-  box-shadow:0 24px 60px rgba(0,0,0,.75);
-  display:none;flex-direction:column;overflow:hidden;min-width:400px;min-height:300px}
-.guide-panel.active{display:flex;animation:guideSlideIn .28s ease-out}
-@keyframes guideSlideIn{from{transform:translateX(80px);opacity:0}to{transform:translateX(0);opacity:1}}
-.guide-panel.maximized{right:0;top:54px;width:100vw;height:calc(100vh - 54px);border-radius:0;left:0}
-.guide-panel-head{display:flex;align-items:center;gap:10px;padding:10px 14px;
-  background:linear-gradient(180deg,#101d33,#0c1728);border-bottom:1px solid var(--border);
-  cursor:grab;user-select:none;flex:none}
-.guide-panel-head:active{cursor:grabbing}
-.guide-panel-title{font-size:13px;font-weight:800;flex:1;color:#fff}
-.guide-panel-actions{display:flex;gap:6px}
-.guide-panel-btn{border:0;background:rgba(255,255,255,.06);color:#dbe6f6;
-  width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;
-  display:grid;place-items:center;transition:.15s;font-family:inherit}
-.guide-panel-btn:hover{background:rgba(255,255,255,.15)}
-.guide-panel-btn.close:hover{background:#b91c1c}
-.guide-panel-body{flex:1;min-height:0;background:#0a1424;position:relative}
-.guide-panel-body iframe{width:100%;height:100%;border:0;display:block}
-.guide-panel-resize{position:absolute;right:0;bottom:0;width:16px;height:16px;
-  cursor:nwse-resize;z-index:2;
-  background:linear-gradient(135deg,transparent 45%,var(--accent) 45%,var(--accent) 55%,transparent 55%),
-             linear-gradient(135deg,transparent 65%,var(--accent) 65%,var(--accent) 72%,transparent 72%);
-  border-bottom-right-radius:14px}
-.guide-panel-resize:hover{filter:brightness(1.4)}
   :root{--bg:#070c16;--panel:#0f1a2e;--panel-2:#152340;--border:#22334f;
     --text:#dbe6f6;--muted:#7c8fa9;--accent:#38bdf8;--accent-2:#8b5cf6}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -49,33 +21,33 @@
     overflow-x:auto;scrollbar-width:none}
   #topbar::-webkit-scrollbar{display:none}
   /* ==== GUIDE PANEL ==== */
-.guide-panel{position:fixed;z-index:150;right:20px;top:70px;
-  width:min(900px, 85vw);height:min(85vh, 900px);
-  background:#0f1a2e;border:1px solid var(--border);border-radius:14px;
-  box-shadow:0 24px 60px rgba(0,0,0,.75);
-  display:none;flex-direction:column;overflow:hidden;min-width:400px;min-height:300px}
-.guide-panel.active{display:flex;animation:guideSlideIn .28s ease-out}
-@keyframes guideSlideIn{from{transform:translateX(80px);opacity:0}to{transform:translateX(0);opacity:1}}
-.guide-panel.maximized{right:0;top:54px;width:100vw;height:calc(100vh - 54px);border-radius:0;left:0}
-.guide-panel-head{display:flex;align-items:center;gap:10px;padding:10px 14px;
-  background:linear-gradient(180deg,#101d33,#0c1728);border-bottom:1px solid var(--border);
-  cursor:grab;user-select:none;flex:none}
-.guide-panel-head:active{cursor:grabbing}
-.guide-panel-title{font-size:13px;font-weight:800;flex:1;color:#fff}
-.guide-panel-actions{display:flex;gap:6px}
-.guide-panel-btn{border:0;background:rgba(255,255,255,.06);color:#dbe6f6;
-  width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;
-  display:grid;place-items:center;transition:.15s;font-family:inherit}
-.guide-panel-btn:hover{background:rgba(255,255,255,.15)}
-.guide-panel-btn.close:hover{background:#b91c1c}
-.guide-panel-body{flex:1;min-height:0;background:#0a1424;position:relative}
-.guide-panel-body iframe{width:100%;height:100%;border:0;display:block}
-.guide-panel-resize{position:absolute;right:0;bottom:0;width:16px;height:16px;
-  cursor:nwse-resize;z-index:2;
-  background:linear-gradient(135deg,transparent 45%,var(--accent) 45%,var(--accent) 55%,transparent 55%),
-             linear-gradient(135deg,transparent 65%,var(--accent) 65%,var(--accent) 72%,transparent 72%);
-  border-bottom-right-radius:14px}
-.guide-panel-resize:hover{filter:brightness(1.4)}
+  .guide-panel{position:fixed;z-index:150;right:20px;top:70px;
+    width:min(900px, 85vw);height:min(85vh, 900px);
+    background:#0f1a2e;border:1px solid var(--border);border-radius:14px;
+    box-shadow:0 24px 60px rgba(0,0,0,.75);
+    display:none;flex-direction:column;overflow:hidden;min-width:400px;min-height:300px}
+  .guide-panel.active{display:flex;animation:guideSlideIn .28s ease-out}
+  @keyframes guideSlideIn{from{transform:translateX(80px);opacity:0}to{transform:translateX(0);opacity:1}}
+  .guide-panel.maximized{right:0;top:54px;width:100vw;height:calc(100vh - 54px);border-radius:0;left:0}
+  .guide-panel-head{display:flex;align-items:center;gap:10px;padding:10px 14px;
+    background:linear-gradient(180deg,#101d33,#0c1728);border-bottom:1px solid var(--border);
+    cursor:grab;user-select:none;flex:none}
+  .guide-panel-head:active{cursor:grabbing}
+  .guide-panel-title{font-size:13px;font-weight:800;flex:1;color:#fff}
+  .guide-panel-actions{display:flex;gap:6px}
+  .guide-panel-btn{border:0;background:rgba(255,255,255,.06);color:#dbe6f6;
+    width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;
+    display:grid;place-items:center;transition:.15s;font-family:inherit}
+  .guide-panel-btn:hover{background:rgba(255,255,255,.15)}
+  .guide-panel-btn.close:hover{background:#b91c1c}
+  .guide-panel-body{flex:1;min-height:0;background:#0a1424;position:relative}
+  .guide-panel-body iframe{width:100%;height:100%;border:0;display:block}
+  .guide-panel-resize{position:absolute;right:0;bottom:0;width:16px;height:16px;
+    cursor:nwse-resize;z-index:2;
+    background:linear-gradient(135deg,transparent 45%,var(--accent) 45%,var(--accent) 55%,transparent 55%),
+               linear-gradient(135deg,transparent 65%,var(--accent) 65%,var(--accent) 72%,transparent 72%);
+    border-bottom-right-radius:14px}
+  .guide-panel-resize:hover{filter:brightness(1.4)}
   .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px;white-space:nowrap}
   .logo-mark{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:14px;
     background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#04101f;
@@ -555,6 +527,21 @@
       В <b>режиме редактирования</b> уровень останется в конструкторе: выбирайте объекты и смотрите их блоки внизу.
     </div>
   </div>
+</div>
+
+<!-- ==== GUIDE PANEL ==== -->
+<div id="guidePanel" class="guide-panel">
+  <div class="guide-panel-head" id="guidePanelHead">
+    <span class="guide-panel-title">📖 Гайд по программированию</span>
+    <div class="guide-panel-actions">
+      <button class="guide-panel-btn" id="guidePanelMax" title="Развернуть на весь экран">⛶</button>
+      <button class="guide-panel-btn close" id="guidePanelClose" title="Закрыть">✕</button>
+    </div>
+  </div>
+  <div class="guide-panel-body">
+    <iframe id="guideFrame" src="about:blank" loading="lazy" title="Гайд"></iframe>
+  </div>
+  <div class="guide-panel-resize" id="guidePanelResize"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/blockly@10.4.3/blockly.min.js"></script>
@@ -1238,7 +1225,6 @@ const PALETTE = [
   { type:'lava',     name:'Лава',   icon:'🔥', solid:false, hazard:true, lava:true },
   { type:'cloud',    name:'Облако', icon:'☁️', solid:false, cloud:true },
   { type:'mountain', name:'Гора',   icon:'⛰️', solid:true, mountain:true },
-  /* новые модели */
   { type:'ladder',     name:'Лестница', icon:'🪜', solid:false, build:true },
   { type:'streetlamp', name:'Фонарь',   icon:'💡', solid:true,  build:true },
   { type:'grass',      name:'Трава',    icon:'🌿', solid:false, plant:true },
@@ -1369,7 +1355,6 @@ function createObject(type){
       snow.rotation.y = Math.PI / 7;
       g.userData.isMountain = true; g.userData.texture = 'none'; break;
     }
-    /* ===== Новые модели ===== */
     case 'ladder': {
       const wood = std(0x8b5a2b, { roughness: 0.85 });
       put(new THREE.BoxGeometry(0.1, 4, 0.1), wood, -0.35, 0, 2);
@@ -1385,7 +1370,6 @@ function createObject(type){
       put(new THREE.CylinderGeometry(0.08, 0.12, 4, 12), dark, 0, 0, 2.1);
       put(new THREE.CylinderGeometry(0.35, 0.15, 0.4, 12), dark, 0, 0, 4.3);
       put(new THREE.SphereGeometry(0.22, 16, 12), std(0xfbbf24, { emissive:0xfbbf24, emissiveIntensity:0.9 }), 0, 0, 4.1);
-      // световой конус
       put(new THREE.ConeGeometry(1.2, 3, 16, 1, true),
         new THREE.MeshBasicMaterial({ color:0xfbbf24, transparent:true, opacity:0.08, side:THREE.DoubleSide, depthWrite:false }), 0, 0, 2.7);
       g.userData.isLamp = true; g.userData.texture = 'none'; break;
@@ -1517,7 +1501,6 @@ function addObject(type, opts = {}){
   obj.userData.layer2D = 0;
   obj.userData.blocklyXml = '';
   obj.userData._faceX = 1;
-  // HP / прочность
   obj.userData.maxHp = opts.hp ?? (meta.enemy ? 1 : 0);
   obj.userData.hp = obj.userData.maxHp;
   obj.userData.invulnerable = !!opts.invulnerable;
@@ -1646,7 +1629,7 @@ function updateParticles(dt){
   }
 }
 
-/* ========== ВЫДЕЛЕНИЕ (хитбокс — ребёнок объекта) ========== */
+/* ========== ВЫДЕЛЕНИЕ ========== */
 let selBoxOutline = null, selBoxOwner = null;
 function attachSelectionOutline(obj){
   detachSelectionOutline();
@@ -1685,7 +1668,6 @@ function detachSelectionOutline(){
     selBoxOwner = null;
   }
 }
-
 function select(obj){
   if(selected && selected !== obj && blocklyWs) saveSelectedXml();
   selected = obj;
@@ -1726,7 +1708,7 @@ function getWorld2D(e){
   return { x: v.x, y: v.y };
 }
 
-/* ========== ПЕРЕТАСКИВАНИЕ (с примагничиванием) ========== */
+/* ========== ПЕРЕТАСКИВАНИЕ ========== */
 let dragState = null, downX = 0, downY = 0, cam2DPanning = false;
 let cam2DPanStart = { x:0, y:0, camX:0, camY:0 };
 let hoveredObject = null;
@@ -2549,7 +2531,6 @@ function startPlay(){
     if(o.userData.isEnemy){
       o.userData.dead = false; o.visible = true;
       o.userData.aggro = false;
-      // восстанавливаем HP
       if(o.userData.maxHp > 0) o.userData.hp = o.userData.maxHp;
       o.userData.homeX = o.position.x; o.userData.homeY = o.position.z;
       if(o.userData.zoneMesh){
@@ -2772,7 +2753,6 @@ function updatePlayerProjectiles(dt){
     p.mesh.position.addScaledVector(p.vel, dt);
     if(p.glow) p.glow.scale.setScalar(1 + Math.sin(elapsed*14 + i)*0.12);
     let hit = false;
-    // 1) попадание во врага
     for(const obj of objects){
       if(!obj.userData.isEnemy || obj.userData.dead) continue;
       const ex = obj.position.x, ey = obj.position.y + 0.9, ez = obj.position.z;
@@ -2783,7 +2763,6 @@ function updatePlayerProjectiles(dt){
         damageObject(obj, 1); hit = true; break;
       }
     }
-    // 2) попадание в другие объекты с HP или в твёрдые
     if(!hit){
       for(const obj of objects){
         if(obj.userData.isEnemy || obj.userData.dead) continue;
@@ -2931,7 +2910,7 @@ function updateEnemies2D(dt){
   }
 }
 
-/* ========== КОЛЛИЗИИ (с уроном при падении) ========== */
+/* ========== КОЛЛИЗИИ ========== */
 const boxCache = new Map();
 function getBox(obj){
   let b = boxCache.get(obj);
@@ -2977,7 +2956,6 @@ function resolveVerticalSupport(){
     if(box.max.y <= p.position.y + 0.25 && box.max.y > support) support = box.max.y;
   }
   if(p.position.y < support){
-    // Урон при падении
     if((p.userData.vy || 0) < FALL_DAMAGE_VY){
       const dmg = Math.min(5, Math.floor((Math.abs(p.userData.vy) - Math.abs(FALL_DAMAGE_VY)) / 4) + 1);
       for(let i = 0; i < dmg; i++) onPlayerHit();
@@ -3192,7 +3170,6 @@ function loadProjectData(data){
   if(data.app && data.app !== 'VolVoxGameDev' && !data.objects3d && !data.objects2d){
     toast('❌ Неверный формат'); return;
   }
-  // Очистить обе размерности
   for(const d of ['3d','2d']){
     const saved = objects;
     objects = objectsByDim[d];
@@ -3200,14 +3177,12 @@ function loadProjectData(data){
     objects = saved;
   }
   Object.keys(counters).forEach(k => counters[k] = 0);
-  // Фон и подземный слой
   if(data.background) applyBackground(data.background);
   if(data.underground){
     undergroundSettings.depth = data.underground.depth ?? 6;
     undergroundSettings.texture = data.underground.texture ?? 'none';
     updateUnderground();
   }
-  // Восстановить
   const rebuild = (dimKey, list) => {
     const saved = objects;
     objects = objectsByDim[dimKey];
@@ -3231,10 +3206,9 @@ function loadProjectData(data){
   };
   rebuild('3d', data.objects3d);
   rebuild('2d', data.objects2d);
-  // Переключить размерность
   const targetDim = data.dimension || '3d';
   if(targetDim !== dimension){
-    dimension = null; // форсируем
+    dimension = null;
     setDimension(targetDim);
   } else {
     refreshSceneList();
@@ -3275,8 +3249,7 @@ $('btnToggleBlocks').onclick = () => {
 $('btnSettings').onclick = () => {
   const modal = $('settingsModal');
   modal.classList.add('active');
-  // заполняем
-  const sensVal = (MOUSE_SENS * 1000).toFixed(1); // 0.0022 → 2.2
+  const sensVal = (MOUSE_SENS * 1000).toFixed(1);
   const range = modal.querySelector('input[type=range][data-p="sens"]');
   const num = modal.querySelector('input[type=number][data-p="sens"]');
   range.value = sensVal; num.value = sensVal;
@@ -3651,7 +3624,6 @@ function buildDemo(){
   addObject('cloud', { x: -12, y: 8, z: 10 });
   addObject('water', { x: -12, y: -10 });
   addObject('lava',  { x: 14, y: 2 });
-  /* Новые модели */
   addObject('ladder', { x: 4, y: 4 });
   addObject('streetlamp', { x: -4, y: 8 });
   addObject('streetlamp', { x: 6, y: -4 });
@@ -3832,7 +3804,6 @@ function animate(){
       o.userData.cloudInner.position.y = Math.sin(elapsed * 0.9 + o.id) * 0.35;
     }
     if(o.userData.isGrass && !paused){
-      // лёгкое качание травинок
       o.rotation.z = Math.sin(elapsed * 1.4 + o.id) * 0.04;
     }
     if(o.userData._floating && !paused){
@@ -3860,7 +3831,7 @@ setTimeout(() => {
   if(p) select(p); else updateBlocksCount();
 }, 100);
 </script>
-  <script>
+<script>
 /* ==== GUIDE PANEL LOGIC ==== */
 (function(){
   const panel   = document.getElementById('guidePanel');
@@ -3874,13 +3845,11 @@ setTimeout(() => {
 
   let loaded = false;
 
-  /* ---------- Open / Close ---------- */
   function openGuide(){
     if(!loaded){
       frame.src = 'guide.html';
       loaded = true;
     }
-    // Восстановить геометрию
     try{
       const saved = localStorage.getItem('vvg_guide_geom');
       if(saved){
@@ -3911,7 +3880,6 @@ setTimeout(() => {
   };
   btnClose.onclick = closeGuide;
 
-  /* ---------- Maximize ---------- */
   btnMax.onclick = () => {
     panel.classList.toggle('maximized');
     if(!panel.classList.contains('maximized')){
@@ -3926,11 +3894,9 @@ setTimeout(() => {
       panel.style.right = 'auto';
     }
     saveGeom();
-    // Дать iframe перерисоваться
     setTimeout(() => { try{ window.dispatchEvent(new Event('resize')); }catch(_){} }, 100);
   };
 
-  /* ---------- Drag ---------- */
   let dragging = false, dragOffX = 0, dragOffY = 0;
   head.addEventListener('pointerdown', (e) => {
     if(e.target.closest('button')) return;
@@ -3946,7 +3912,6 @@ setTimeout(() => {
     if(!dragging) return;
     let nx = e.clientX - dragOffX;
     let ny = e.clientY - dragOffY;
-    // Ограничения: не утащить за пределы экрана
     const maxL = window.innerWidth  - 80;
     const maxT = window.innerHeight - 60;
     nx = Math.max(-panel.offsetWidth + 100, Math.min(maxL, nx));
@@ -3962,7 +3927,6 @@ setTimeout(() => {
     saveGeom();
   });
 
-  /* ---------- Resize ---------- */
   let resizing = false, rW = 0, rH = 0, rX = 0, rY = 0;
   resizeEl.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
@@ -3989,7 +3953,6 @@ setTimeout(() => {
     setTimeout(() => { try{ window.dispatchEvent(new Event('resize')); }catch(_){} }, 80);
   });
 
-  /* ---------- Save geometry ---------- */
   function saveGeom(){
     const r = panel.getBoundingClientRect();
     try{
@@ -4000,31 +3963,12 @@ setTimeout(() => {
     }catch(_){}
   }
 
-  /* ---------- Escape ---------- */
   window.addEventListener('keydown', (e) => {
     if(e.key === 'Escape' && panel.classList.contains('active')){
       closeGuide();
     }
   });
-
-  /* ---------- Touch-drag через сам iframe запрещаем ---------- */
-  // (иначе если пользователь тащит мышкой внутри iframe, панель не двигается)
-  // Тянуть можно ТОЛЬКО за шапку — это ок.
 })();
 </script>
-  <!-- ==== GUIDE PANEL ==== -->
-<div id="guidePanel" class="guide-panel">
-  <div class="guide-panel-head" id="guidePanelHead">
-    <span class="guide-panel-title">📖 Гайд по программированию</span>
-    <div class="guide-panel-actions">
-      <button class="guide-panel-btn" id="guidePanelMax" title="Развернуть на весь экран">⛶</button>
-      <button class="guide-panel-btn close" id="guidePanelClose" title="Закрыть">✕</button>
-    </div>
-  </div>
-  <div class="guide-panel-body">
-    <iframe id="guideFrame" src="about:blank" loading="lazy" title="Гайд"></iframe>
-  </div>
-  <div class="guide-panel-resize" id="guidePanelResize"></div>
-</div>
 </body>
 </html>
