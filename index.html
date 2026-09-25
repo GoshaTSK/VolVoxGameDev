@@ -2581,6 +2581,7 @@ function renderInspector(){
 function setColor(obj, hex){
   if(!hex) return;
   if(obj.userData && obj.userData.isCustom) return;
+  if(obj.userData && (obj.userData.isPlayer || obj.userData.isEnemy)) return;
   const c = new THREE.Color(hex);
   obj.traverse(o => {
     if(o.isMesh && !o.userData._outline){
@@ -3430,7 +3431,7 @@ function serializeObject(o){
       else if(col !== c) multiColor = true;
     }
   });
-  if(multiColor || isCustom) col = null;
+  if(multiColor || isCustom || o.userData.isPlayer || o.userData.isEnemy) col = null;
   return {
     type: o.userData.type,
     x: o.position.x, y: o.position.z, z: o.position.y,
