@@ -813,16 +813,6 @@ function initBlocklyBlocks(){
   const O = { ATOMIC:J.ORDER_ATOMIC, NONE:J.ORDER_NONE, ADD:J.ORDER_ADDITION, MUL:J.ORDER_MULTIPLICATION,
     REL:J.ORDER_RELATIONAL, AND:J.ORDER_LOGICAL_AND, OR:J.ORDER_LOGICAL_OR, NOT:J.ORDER_UNARY_NEGATION };
   const V = (b, g, n, o) => { const c = g.valueToCode(b, n, o || O.NONE); return c || '0'; };
-    const hatWrap = (b, g) => {
-    const nb = b.getNextBlock ? b.getNextBlock() : null;
-    let inner = '';
-    if(nb){
-      try{ inner = g.blockToCode(nb) || ''; }catch(e){ console.warn('hatWrap gen', e); }
-    }
-    return `function*(api){\n${inner}}\n`;
-  };
-  J.forBlock['event_flag']=hatWrap; J.forBlock['event_start']=hatWrap;
-  J.forBlock['event_key']=hatWrap; J.forBlock['event_near']=hatWrap; J.forBlock['event_touch']=hatWrap;
   J.forBlock['control_forever'] = (b, g) => `while(true){\n${g.statementToCode(b,'BODY')||''}yield 0;\n}\n`;
   J.forBlock['control_repeat'] = (b, g) =>
     `{ const _n=Math.max(0,Math.floor(${V(b,g,'N')})); for(let _i=0;_i<_n;_i++){\n${g.statementToCode(b,'BODY')||''}yield 0;\n} }\n`;
@@ -1003,22 +993,58 @@ function compileWorkspaceToScripts(ws){
 }
 function buildProgramFromXml(xml){
   if(typeof Blockly === 'undefined') return null;
-  const ws = new Blockly.Workspace();
+  const NS = Blockly.utils.xml.NAME_SPACE || 'https://developers.google.com/blockly/xml';
   try{
     const dom = Blockly.utils.xml.textToDom(xml);
-    Blockly.Xml.domToWorkspace(dom, ws);
-    const sc = compileWorkspaceToScripts(ws);
-    const parts = [];
-    parts.push('return {');
-    parts.push('flag:[' + sc.flag.map(s => `(${s})`).join(',') + '],');
-    parts.push('near:[' + sc.near.map(s => `(${s})`).join(',') + '],');
-    parts.push('touch:[' + sc.touch.map(s => `(${s})`).join(',') + '],');
-    parts.push('key:{' + Object.keys(sc.key).map(k =>
-      JSON.stringify(k) + ':[' + sc.key[k].map(s => `(${s})`).join(',') + ']').join(',') + '}');
-    parts.push('};');
-    return new Function(parts.join('\n'))();
-  }catch(e){ console.warn('buildProgramFromXml', e); return null; }
-  finally { ws.dispose(); }
+    const topNodes = Array.from(dom.children).filter(c => c.tagName && c.tagName.toLowerCase() === 'block');
+    const scripts = { flag: [], near: [], touch: [], key: {} };
+    const J = Blockly.JavaScript;
+
+    for(const bNode of topNodes){
+      const bType = bNode.getAttribute('type');
+      let keyName = null;
+      if(bType === 'event_key'){
+        const field = bNode.querySelector('field[name="KEY"]');
+        keyName = field ? field.textContent.trim() : 'Space';
+      }
+
+      const singleXml = `<xml xmlns="${NS}">${bNode.outerHTML}</xml>`;
+      const ws = new Blockly.Workspace();
+      try{
+        const singleDom = Blockly.utils.xml.textToDom(singleXml);
+        Blockly.Xml.domToWorkspace(singleDom, ws);
+        if(typeof J.init === 'function') J.init(ws);
+        const top = ws.getTopBlocks(true)[0];
+        if(!top) continue;
+
+        // Вручную обходим next-цепочку, вызывая init ПЕРЕД каждым blockToCode
+        let bodyCode = '';
+        let nxt = top.getNextBlock();
+        while(nxt){
+          try{
+            if(typeof J.init === 'function') J.init(ws);
+            const c = J.blockToCode(nxt, true) || '';
+            if(typeof c === 'string') bodyCode += c;
+          }catch(e){ console.warn('gen block', nxt && nxt.type, e); }
+          nxt = nxt.getNextBlock();
+        }
+
+        let fn = null;
+        try{ fn = new Function(`return (function*(api){\n${bodyCode}\n});`)(); }
+        catch(e){ console.warn('compile script failed for', bType, e); continue; }
+        if(!fn) continue;
+
+        if(bType === 'event_flag' || bType === 'event_start') scripts.flag.push(fn);
+        else if(bType === 'event_near') scripts.near.push(fn);
+        else if(bType === 'event_touch') scripts.touch.push(fn);
+        else if(bType === 'event_key' && keyName){
+          (scripts.key[keyName] = scripts.key[keyName] || []).push(fn);
+        }
+      }catch(e){ console.warn('single script fail', bType, e); }
+      finally { ws.dispose(); }
+    }
+    return scripts;
+  }catch(e){ console.warn('buildProgramFromXml fatal', e); return null; }
 }
 function makeRunner(genFn, api){
   let it;
