@@ -13,6 +13,7 @@
     background:var(--bg);color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased}
   #app{display:grid;grid-template-rows:54px 1fr 236px;height:100vh;transition:grid-template-rows .25s}
   #app.blocks-expanded{grid-template-rows:54px 120px 1fr}
+    #app.blocks-fullscreen{grid-template-rows:54px 0px 1fr}
   #app.blocks-hidden{grid-template-rows:54px 1fr 0px}
   #app.blocks-hidden #blocks{display:none}
   #app.no-transition{transition:none!important}
@@ -506,7 +507,7 @@
       <button class="btn" id="btnBlocksExample">💡 Пример</button>
       <button class="btn" id="btnBlocksXml">💾 XML</button>
       <button class="btn danger" id="btnBlocksClear">🗑 Очистить</button>
-      <button class="btn" id="btnBlocksExpand">⛶</button>
+      <button class="btn" id="btnBlocksExpand" title="Развернуть панель логики">⛶</button>
     </div>
     <div id="blocklyDiv"></div>
   </section>
@@ -2619,7 +2620,8 @@ function setMode(m){
 }
 
 function startPlay(){
-  if(blocklyWs) saveSelectedXml();
+  if(blocklyWs) saveSelectedXml();  
+  setBlocksFullscreen(false);
   saveSnapshot();
   let p = objects.find(isPlayer);
   if(!p) p = addObject('player', { x:0, y:0, z:1 });
@@ -2770,6 +2772,10 @@ window.addEventListener('keydown', e => {
     if(e.code === 'KeyR') restartPlay();
   }
   if(e.code === 'Escape'){
+        if(appEl.classList.contains('blocks-fullscreen')){
+      setBlocksFullscreen(false);
+      return;
+    }
     if($('gamesModal').classList.contains('active')){ closeGamesModal(); return; }
     if($('settingsModal').classList.contains('active')){ $('settingsModal').classList.remove('active'); return; }
     if(mode === 'play'){
@@ -3807,13 +3813,37 @@ $('btnBlocksClear').onclick = () => {
   updateBlocksCount(); refreshSceneList();
   toast('Программа очищена');
 };
-$('btnBlocksExpand').onclick = () => {
-  appEl.classList.toggle('blocks-expanded');
+function updateBlocksExpandBtn(){
+  const btn = $('btnBlocksExpand');
+  if(!btn) return;
+  const isFull = appEl.classList.contains('blocks-fullscreen');
+  btn.textContent = isFull ? '⤡' : '⛶';
+  btn.title = isFull ? 'Свернуть панель логики (Esc)' : 'Развернуть панель логики';
+  btn.classList.toggle('on', isFull);
+}
+
+function setBlocksFullscreen(on){
+  if(mode === 'play') return;
+  appEl.classList.remove('blocks-expanded', 'blocks-hidden');
+  $('btnToggleBlocks').classList.remove('on');
+  appEl.classList.toggle('blocks-fullscreen', !!on);
+  updateBlocksExpandBtn();
+  // Даём гриду примениться, потом три раза пересчитываем размеры —
+  // чтобы Blockly и canvas успели подхватить новую высоту
   requestAnimationFrame(() => {
     ensureResize();
     if(typeof Blockly !== 'undefined' && blocklyWs){ try{ Blockly.svgResize(blocklyWs); }catch(_){} }
   });
+  setTimeout(() => {
+    ensureResize();
+    if(typeof Blockly !== 'undefined' && blocklyWs){ try{ Blockly.svgResize(blocklyWs); }catch(_){} }
+  }, 260);
+}
+
+$('btnBlocksExpand').onclick = () => {
+  setBlocksFullscreen(!appEl.classList.contains('blocks-fullscreen'));
 };
+updateBlocksExpandBtn();
 $('btnBlocksXml').onclick = () => {
   if(!selected){ toast('Сначала выберите объект'); return; }
   if(!blocklyWs) return;
