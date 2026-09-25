@@ -1869,25 +1869,6 @@ function clearScene(){
   clearProjectiles(); clearPlayerProjectiles(); clearParticles();
   [...objects].forEach(removeObject);
   Object.keys(counters).forEach(k => counters[k] = 0);
-  // Восстановить кастомные модели (merge — не удаляем существующие)
-  if(data.customModels && typeof data.customModels === 'object'){
-    let added = 0;
-    for(const id in data.customModels){
-      if(!customModels[id]){
-        customModels[id] = data.customModels[id];
-        added++;
-      }
-      if(!PALETTE.find(p => p.type === 'custom_' + id)){
-        PALETTE.push({
-          type: 'custom_' + id,
-          name: data.customModels[id].name,
-          icon: '★',
-          solid: true,
-          custom: true,
-        });
-      }
-    }
-
   Object.keys(cooldowns).forEach(k => delete cooldowns[k]);
   enemyCooldowns.clear();
   score = 0; updateScore();
@@ -3491,6 +3472,31 @@ function loadProjectData(data){
     objects = saved;
   }
   Object.keys(counters).forEach(k => counters[k] = 0);
+  
+  // Восстановить кастомные модели (merge — не удаляем существующие)
+  if(data.customModels && typeof data.customModels === 'object'){
+    let added = 0;
+    for(const id in data.customModels){
+      if(!customModels[id]){
+        customModels[id] = data.customModels[id];
+        added++;
+      }
+      if(!PALETTE.find(p => p.type === 'custom_' + id)){
+        PALETTE.push({
+          type: 'custom_' + id,
+          name: data.customModels[id].name,
+          icon: '★',
+          solid: true,
+          custom: true,
+        });
+      }
+    }
+    if(added > 0){
+      renderPalette();
+      saveCustomModelsToStorage();
+      toast(`★ Загружено моделей: ${added}`);
+    }
+  }
   if(data.background) applyBackground(data.background);
   if(data.underground){
     undergroundSettings.depth = data.underground.depth ?? 6;
