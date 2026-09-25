@@ -647,6 +647,33 @@ function initBlocklyBlocks(){
     { type:'game_score', message0:'добавить %1 очков',
       args0:[{type:'input_value', name:'N', check:'Number'}], colour:'#FF6680', previousStatement:null, nextStatement:null },
     { type:'game_disappear', message0:'исчезнуть', colour:'#FF6680', previousStatement:null, nextStatement:null },
+    /* --- Блоки совместимости с гайдом --- */
+    { type:'sensing_player_hp', message0:'❤️ HP игрока', colour:'#5CB1D6', output:'Number' },
+    { type:'sensing_self_hp', message0:'HP объекта', colour:'#5CB1D6', output:'Number' },
+    { type:'combat_damage_player', message0:'нанести игроку %1 урона',
+      args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF3355', previousStatement:null, nextStatement:null },
+    { type:'combat_heal_player', message0:'лечить игрока на %1',
+      args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF3355', previousStatement:null, nextStatement:null },
+    { type:'combat_push_player', message0:'оттолкнуть игрока на %1',
+      args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF3355', previousStatement:null, nextStatement:null },
+    { type:'combat_pull_player', message0:'притянуть игрока к себе на %1',
+      args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF3355', previousStatement:null, nextStatement:null },
+    { type:'combat_shoot_player', message0:'выстрелить в игрока', colour:'#FF3355', previousStatement:null, nextStatement:null },
+    { type:'combat_teleport_player', message0:'телепортировать игрока в x:%1 y:%2',
+      args0:[{type:'input_value',name:'X',check:'Number'},{type:'input_value',name:'Y',check:'Number'}],
+      colour:'#FF3355', previousStatement:null, nextStatement:null },
+    { type:'combat_damage_self', message0:'получить %1 урона',
+      args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF3355', previousStatement:null, nextStatement:null },
+    { type:'game_heal_self', message0:'изменить своё HP на %1',
+      args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF6680', previousStatement:null, nextStatement:null },
+    { type:'game_set_invisible', message0:'стать невидимым', colour:'#FF6680', previousStatement:null, nextStatement:null },
+    { type:'game_set_visible', message0:'стать видимым', colour:'#FF6680', previousStatement:null, nextStatement:null },
+    { type:'game_blink', message0:'мигнуть %1 раз',
+      args0:[{type:'input_value',name:'N',check:'Number'}], colour:'#FF6680', previousStatement:null, nextStatement:null },
+    { type:'game_shake', message0:'тряска экрана сила %1',
+      args0:[{type:'input_value',name:'POWER',check:'Number'}], colour:'#FF6680', previousStatement:null, nextStatement:null },
+    { type:'game_message', message0:'показать сообщение %1',
+      args0:[{type:'input_value',name:'T',check:'String'}], colour:'#FF6680', previousStatement:null, nextStatement:null },
   ]);
   const J = Blockly.JavaScript;
   if(!J || !J.forBlock) return;
@@ -700,7 +727,21 @@ function initBlocklyBlocks(){
   J.forBlock['op_random']=(b,g)=>[`api.rand(${V(b,g,'A')}, ${V(b,g,'B')})`,O.ATOMIC];
   J.forBlock['op_join']=(b,g)=>[`(String(${V(b,g,'A')}) + String(${V(b,g,'B')}))`,O.ADD];
   J.forBlock['game_score']=(b,g)=>`api.addScore(${V(b,g,'N')});\n`;
-  J.forBlock['game_disappear']=()=>`api.disappear();\n`;
+  J.forBlock['game_disappear']=()=>`api.disappear();\n`;  J.forBlock['sensing_player_hp']=()=>['api.getPlayerHp()',O.ATOMIC];
+  J.forBlock['sensing_self_hp']=()=>['api.getSelfHp()',O.ATOMIC];
+  J.forBlock['combat_damage_player']=(b,g)=>`api.dmgPlayer(${V(b,g,'N')});\n`;
+  J.forBlock['combat_heal_player']=(b,g)=>`api.healPlayer(${V(b,g,'N')});\n`;
+  J.forBlock['combat_push_player']=(b,g)=>`api.pushPlayer(${V(b,g,'N')});\n`;
+  J.forBlock['combat_pull_player']=(b,g)=>`api.pullPlayer(${V(b,g,'N')});\n`;
+  J.forBlock['combat_shoot_player']=()=>`api.shootPlayer();\n`;
+  J.forBlock['combat_teleport_player']=(b,g)=>`api.teleportPlayer(${V(b,g,'X')}, ${V(b,g,'Y')});\n`;
+  J.forBlock['combat_damage_self']=(b,g)=>`api.dmgSelf(${V(b,g,'N')});\n`;
+  J.forBlock['game_heal_self']=(b,g)=>`api.healSelf(${V(b,g,'N')});\n`;
+  J.forBlock['game_set_invisible']=()=>`api.setInvisible();\n`;
+  J.forBlock['game_set_visible']=()=>`api.setVisible();\n`;
+  J.forBlock['game_blink']=(b,g)=>`api.blink(${V(b,g,'N')});\n`;
+  J.forBlock['game_shake']=(b,g)=>`api.shake(${V(b,g,'POWER')});\n`;
+  J.forBlock['game_message']=(b,g)=>`api.message(${V(b,g,'T')});\n`;
   J.forBlock['variables_get']=b=>[`api.getVar(${JSON.stringify(b.getFieldValue('VAR'))})`,O.ATOMIC];
   J.forBlock['variables_set']=(b,g)=>`api.setVar(${JSON.stringify(b.getFieldValue('VAR'))}, ${V(b,g,'VALUE',O.NONE)});\n`;
   J.forBlock['math_change']=(b,g)=>`api.changeVar(${JSON.stringify(b.getFieldValue('VAR'))}, ${V(b,g,'DELTA',O.NONE)});\n`;
@@ -910,6 +951,82 @@ function makeApi(obj, rt){
     changeVar(name, v){ rt.vars[name] = (Number(rt.vars[name])||0) + (Number(v)||0); },
     getVar(name){ return rt.vars[name] || 0; },
     rand(a, b){ a = Number(a)||0; b = Number(b)||0; return a + Math.random()*(b-a); },
+        getPlayerHp(){ return score; },
+    getSelfHp(){ return obj.userData.hp ?? 0; },
+    dmgPlayer(n){
+      n = Math.max(0, Math.round(Number(n)||0));
+      for(let i = 0; i < n; i++) onPlayerHit();
+    },
+    healPlayer(n){
+      n = Math.max(0, Math.round(Number(n)||0));
+      score = Math.min(9, score + n); updateScore();
+    },
+    pushPlayer(n){
+      n = Number(n)||0; const p = objects.find(isPlayer); if(!p) return;
+      const dx = p.position.x - obj.position.x;
+      const dz = (dimension === '2d' ? 0 : p.position.z - obj.position.z);
+      const d = Math.hypot(dx, dz) || 1;
+      p.position.x += (dx/d) * n;
+      if(dimension === '3d') p.position.z += (dz/d) * n;
+    },
+    pullPlayer(n){
+      n = Number(n)||0; const p = objects.find(isPlayer); if(!p) return;
+      const dx = obj.position.x - p.position.x;
+      const dz = (dimension === '2d' ? 0 : obj.position.z - p.position.z);
+      const d = Math.hypot(dx, dz) || 1;
+      p.position.x += (dx/d) * n;
+      if(dimension === '3d') p.position.z += (dz/d) * n;
+    },
+    shootPlayer(){
+      const p = objects.find(isPlayer); if(!p) return;
+      const fwd = new THREE.Vector3(Math.sin(obj.rotation.y), 0, Math.cos(obj.rotation.y));
+      const muzzle = obj.position.clone().addScaledVector(fwd, 0.7); muzzle.y += 1.15;
+      const target = p.position.clone(); target.y += PLAYER_HEIGHT*0.55;
+      spawnProjectile(muzzle, target);
+    },
+    teleportPlayer(x, y){
+      const p = objects.find(isPlayer); if(!p) return;
+      p.position.x = Number(x)||0;
+      if(dimension === '2d') p.position.y = Math.max(0, Number(y)||0);
+      else p.position.z = Number(y)||0;
+    },
+    dmgSelf(n){ damageObject(obj, Math.max(0, Math.round(Number(n)||0))); },
+    healSelf(n){
+      const h = Math.max(0, Math.round(Number(n)||0));
+      obj.userData.hp = Math.min(obj.userData.maxHp || 99, (obj.userData.hp ?? 0) + h);
+      refreshSceneList();
+    },
+    setInvisible(){
+      obj.traverse(o => { if(o.isMesh && o.material){ o.material.transparent = true; o.material.opacity = 0.25; } });
+    },
+    setVisible(){
+      obj.traverse(o => { if(o.isMesh && o.material){ o.material.opacity = 1; o.material.transparent = false; } });
+    },
+    blink(n){
+      n = Math.max(1, Math.round(Number(n)||1));
+      const wasVisible = obj.visible; let i = 0;
+      const doBlink = () => {
+        if(i >= n*2){ obj.visible = wasVisible; return; }
+        obj.visible = !obj.visible; i++;
+        setTimeout(doBlink, 100);
+      };
+      doBlink();
+    },
+    shake(power){
+      power = Math.max(0.1, Number(power)||1);
+      const orig = { x: camera3D.position.x, y: camera3D.position.y, z: camera3D.position.z };
+      let t = 0; const amp = power * 0.1;
+      const doShake = () => {
+        t++;
+        if(t > 12){ camera3D.position.set(orig.x, orig.y, orig.z); return; }
+        camera3D.position.x = orig.x + (Math.random()-0.5) * amp;
+        camera3D.position.y = orig.y + (Math.random()-0.5) * amp;
+        camera3D.position.z = orig.z + (Math.random()-0.5) * amp;
+        requestAnimationFrame(doShake);
+      };
+      doShake();
+    },
+    message(t){ toast(String(t == null ? '' : t)); },
   };
 }
 function initRuntimeState(obj){
