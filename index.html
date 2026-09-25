@@ -2579,6 +2579,8 @@ function renderInspector(){
   $('btnDel').onclick = () => removeObject(selected);
 }
 function setColor(obj, hex){
+  if(!hex) return;
+  if(obj.userData && obj.userData.isCustom) return;
   const c = new THREE.Color(hex);
   obj.traverse(o => {
     if(o.isMesh && !o.userData._outline){
@@ -3420,8 +3422,15 @@ function updateHearts(){
 
 /* ========== СЕРИАЛИЗАЦИЯ ========== */
 function serializeObject(o){
-  let col = null;
-  o.traverse(m => { if(m.isMesh && !m.userData._outline && !col) col = '#' + m.material.color.getHexString(); });
+  let col = null, multiColor = false, isCustom = !!o.userData.isCustom;
+  o.traverse(m => {
+    if(m.isMesh && !m.userData._outline && m.material && m.material.color){
+      const c = '#' + m.material.color.getHexString();
+      if(!col) col = c;
+      else if(col !== c) multiColor = true;
+    }
+  });
+  if(multiColor || isCustom) col = null;
   return {
     type: o.userData.type,
     x: o.position.x, y: o.position.z, z: o.position.y,
