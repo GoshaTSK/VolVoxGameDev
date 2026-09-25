@@ -478,6 +478,18 @@
   .modeler-empty{padding:20px 12px;color:var(--muted);font-size:12px;text-align:center;line-height:1.5}
   .pal-item.custom{border-color:#f59e0b;background:#1a1408}
   .pal-item.custom::before{content:'★';position:absolute;top:2px;right:4px;font-size:9px;color:#f59e0b}
+    /* Кнопка удаления на карточке кастомной модели */
+  .pal-item .del-badge{
+    position:absolute;top:-6px;right:-6px;width:20px;height:20px;
+    border-radius:50%;background:#ef4444;color:#fff;font-size:12px;font-weight:800;
+    border:2px solid #0c1728;cursor:pointer;display:none;
+    align-items:center;justify-content:center;line-height:1;
+    box-shadow:0 2px 8px rgba(0,0,0,.5);z-index:2;transition:.15s}
+  .pal-item.custom:hover .del-badge{display:flex}
+  .pal-item .del-badge:hover{background:#b91c1c;transform:scale(1.15)}
+  .pal-item.custom{cursor:pointer}
+  /* Сместить звёздочку влево, чтобы не мешала крестику */
+  .pal-item.custom::before{top:4px;right:auto;left:4px}
   .btn.modeler{background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;border-color:transparent;font-weight:800}
   #settingsModal .modal-buttons{margin-top:20px}
 </style>
@@ -2153,8 +2165,20 @@ function renderPalette(){
       + (p.water ? ' water' : '') + (p.lava ? ' lava' : '') + (p.cloud ? ' cloud' : '')
       + (p.mountain ? ' mountain' : '') + (p.plant ? ' plant' : '') + (p.build ? ' build' : '')
       + (p.custom ? ' custom' : '');
-    el.className = 'pal-item' + extraCls;
+        el.className = 'pal-item' + extraCls;
     el.innerHTML = `<div class="ico">${p.icon}</div><div class="lbl">${p.name}</div>`;
+    if(p.custom){
+      const delBtn = document.createElement('div');
+      delBtn.className = 'del-badge';
+      delBtn.textContent = '×';
+      delBtn.title = 'Удалить модель';
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        deleteCustomModel(p.type.slice(7)); // 'custom_' → 7 символов
+      };
+      el.appendChild(delBtn);
+    }
     el.onclick = () => { const o = addObject(p.type); select(o); };
     palGrid.appendChild(el);
   });
@@ -4696,7 +4720,45 @@ function modelerSaveToPalette(){
 }
 
   /* ========== CUSTOM MODELS PERSISTENCE ========== */
-function saveCustomModelsToStorage(){
+/* ========== DELETE CUSTOM MODEL ========== */
+function deleteCustomModel(id){
+  const model = customModels[id];
+  if(!model) return;
+
+  // 1) Посчитать, сколько объектов этого типа сейчас на сцене (3D и 2D)
+  const type = 'custom_' + id;
+  let count3d = 0, count2d = 0;
+  for(const o of objectsByDim['3d']){ if(o.userData.type === type) count3d++; }
+  for(const o of objectsByDim['2d']){ if(o.userData.type === type) count2d++; }
+  const total = count3d + count2d;
+
+  // 2) Подтверждение
+  const msg = total > 0
+    ? `Удалить модель «${model.name}»?\n\nНа сцене сейчас ${total} объектов этого типа — они тоже исчезнут.`
+    : `Удалить модель «${model.name}»?`;
+  if(!confirm(msg)) return;
+
+  // 3) Удалить объекты со сцены (в обоих режимах)
+  for(const dimKey of ['3d','2d']){
+    const saved = objects;
+    objects = objectsByDim[dimKey];
+    [...objectsByDim[dimKey]].forEach(o => {
+      if(o.userData.type === type) removeObject(o);
+    });
+    objects = saved;
+  }
+
+  // 4) Убрать из customModels и PALETTE
+  delete customModels[id];
+  const idx = PALETTE.findIndex(p => p.type === type);
+  if(idx >= 0) PALETTE.splice(idx, 1);
+
+  // 5) Сохранить в localStorage и перерисовать палитру
+  saveCustomModelsToStorage();
+  renderPalette();
+  toast(`🗑 Модель «${model.name}» удалена`);
+}
+  function saveCustomModelsToStorage(){
   try{
     const data = { version: 1, models: customModels };
     localStorage.setItem('vvg_custom_models', JSON.stringify(data));
