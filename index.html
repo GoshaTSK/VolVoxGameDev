@@ -680,7 +680,14 @@ function initBlocklyBlocks(){
   const O = { ATOMIC:J.ORDER_ATOMIC, NONE:J.ORDER_NONE, ADD:J.ORDER_ADDITION, MUL:J.ORDER_MULTIPLICATION,
     REL:J.ORDER_RELATIONAL, AND:J.ORDER_LOGICAL_AND, OR:J.ORDER_LOGICAL_OR, NOT:J.ORDER_UNARY_NEGATION };
   const V = (b, g, n, o) => { const c = g.valueToCode(b, n, o || O.NONE); return c || '0'; };
-  const hatWrap = (b, g) => `function*(api){\n${g.statementToCode(b, 'BODY') || ''}}\n`;
+    const hatWrap = (b, g) => {
+    const nb = b.getNextBlock ? b.getNextBlock() : null;
+    let inner = '';
+    if(nb){
+      try{ inner = g.blockToCode(nb) || ''; }catch(e){ console.warn('hatWrap gen', e); }
+    }
+    return `function*(api){\n${inner}}\n`;
+  };
   J.forBlock['event_flag']=hatWrap; J.forBlock['event_start']=hatWrap;
   J.forBlock['event_key']=hatWrap; J.forBlock['event_near']=hatWrap; J.forBlock['event_touch']=hatWrap;
   J.forBlock['control_forever'] = (b, g) => `while(true){\n${g.statementToCode(b,'BODY')||''}yield 0;\n}\n`;
@@ -851,8 +858,8 @@ function compileWorkspaceToScripts(ws){
   const top = ws.getTopBlocks(true);
   const J = Blockly.JavaScript;
   for(const b of top){
-    let code = null;
-    try{ code = J.blockToCode(b); }catch(e){ console.warn('gen', b.type, e); continue; }
+        let code = null;
+    try{ code = J.blockToCode(b, true); }catch(e){ console.warn('gen', b.type, e); continue; }
     if(typeof code !== 'string' || !code.trim()) continue;
     if(b.type === 'event_flag' || b.type === 'event_start') out.flag.push(code);
     else if(b.type === 'event_key'){ const k = b.getFieldValue('KEY'); (out.key[k]=out.key[k]||[]).push(code); }
