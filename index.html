@@ -2839,6 +2839,7 @@ function startPlay(){
   setViewMode('third');
   for(const o of objects){
     o.userData.baseY = o.position.y;
+    o.userData.onLadder = false;
     o.userData.vy = 0;
     o.userData._lavaCd = 0;
     o.userData._floating = false;
@@ -3346,8 +3347,67 @@ function resolve2DVerticalSupport(entity, halfW = PLAYER_RADIUS, fr = 0.3, baseY
     entity.position.y = s; entity.userData.vy = 0;
   }
 }
-function updatePlayer3D(dt){
+function findNearbyLadder(p){
+  if(!p) return null;
+  const px = p.position.x, pz = p.position.z, py = p.position.y;
+  for(const obj of objects){
+    if(!obj.userData.isLadder || obj.userData.dead || !obj.visible) continue;
+    const lx = obj.position.x, lz = obj.position.z;
+    const dh = Math.hypot(px - lx, pz - lz);
+    if(dh > 0.9) continue;
+    const baseY = obj.position.y;
+    const topY = baseY + 4;
+    if(py + PLAYER_HEIGHT < baseY - 0.3) continue;
+    if(py > topY + 0.5) continue;
+    return obj;
+  }
+  return null;
+}
+  function updatePlayer3D(dt){
   const p = objects.find(isPlayer); if(!p) return;
+  const ladder = findNearbyLadder(p);
+
+  /* ===== Режим лазания ===== */
+  if(ladder){
+    p.userData.onLadder = true;
+    p.userData.vy = 0;
+
+    let dy = 0;
+    if(keys['KeyW'] || keys['ArrowUp']) dy += 1;
+    if(keys['KeyS'] || keys['ArrowDown']) dy -= 1;
+    if(dy !== 0) p.position.y += dy * 4.0 * dt;
+
+    const baseY = ladder.position.y;
+    const topY = ladder.position.y + 4;
+    if(p.position.y < baseY) p.position.y = baseY;
+    if(p.position.y > topY) p.position.y = topY;
+
+    const rX = -Math.cos(cameraYaw), rZ = Math.sin(cameraYaw);
+    let dx = 0, dz = 0;
+    if(keys['KeyD'] || keys['ArrowRight']){ dx += rX; dz += rZ; }
+    if(keys['KeyA'] || keys['ArrowLeft']){ dx -= rX; dz -= rZ; }
+    if(dx || dz){
+      const l = Math.hypot(dx, dz);
+      p.position.x += (dx/l) * 2.0 * dt;
+      p.position.z += (dz/l) * 2.0 * dt;
+    }
+
+    if(keys['Space']){
+      p.userData.vy = 6;
+      p.userData.onLadder = false;
+      const dxp = p.position.x - ladder.position.x;
+      const dzp = p.position.z - ladder.position.z;
+      const dd = Math.hypot(dxp, dzp) || 1;
+      p.position.x += (dxp/dd) * 0.4;
+      p.position.z += (dzp/dd) * 0.4;
+    }
+
+    p.rotation.y = cameraYaw;
+    resolveXZCollisions();
+    return;
+  }
+  /* ===== Обычное движение ===== */
+  p.userData.onLadder = false;
   const fwdX = Math.sin(cameraYaw), fwdZ = Math.cos(cameraYaw);
   const rX = -Math.cos(cameraYaw), rZ = Math.sin(cameraYaw);
   let dx = 0, dz = 0;
