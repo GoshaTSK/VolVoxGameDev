@@ -5178,46 +5178,7 @@ function mpHost(){
 
   mpRenderUI();
 }
-  MP.peer.on('open', (id) => {
-    console.log('Peer открыт:', id);
-    mpRenderUI();
-    toast('📡 Комната ' + MP.roomCode + ' создана');
-  });
-
-  MP.peer.on('connection', (conn) => {
-    MP.conn = conn;
-    conn.on('open', () => {
-      console.log('Гость подключился');
-      const guestId = conn.peer;
-      mpEnsurePeer(guestId, 'Игрок', false);
-      // Отправляем приветствие + проект
-      mpSendTo(conn, { t: 'hi', id: MP.myId, name: MP.myName, isHost: MP.isHost });
-      try{
-        mpSendTo(conn, { t:'project', target: guestId, data: mpSerializeProject() });
-      }catch(e){ console.warn('mp project', e); }
-      mpRenderUI();
-    });
-    conn.on('data', (data) => mpOnMessage(data));
-    conn.on('close', () => {
-      toast('👋 Соединение закрыто');
-      mpLeave(false);
-    });
-    conn.on('error', (e) => console.warn('conn error', e));
-  });
-
-  MP.peer.on('error', (e) => {
-    console.error('Peer error:', e);
-    if(e.type === 'unavailable-id'){
-      toast('❌ Код занят — попробуйте снова');
-      mpLeave(false);
-    } else {
-      toast('❌ Ошибка: ' + e.type);
-    }
-  });
-
-  mpRenderUI();
-}
-function mpJoin(code){
+ function mpJoin(code){
   if(MP.active) mpLeave(false);
   MP.roomCode = code;
   MP.isHost = false;
