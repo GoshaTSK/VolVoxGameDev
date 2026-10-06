@@ -731,6 +731,9 @@ const timerHud = $('timerHud'), timerVal = $('timerVal'), timerBig = $('timerBig
 const winModal = $('winModal'), gameoverModal = $('gameoverModal');
 const modeBadge = $('modeBadge'), vpHint = $('vpHint'), sky2d = $('sky2d');
 const objCountEl = $('objCount'), zoomVal = $('zoomVal');
+var MP = { active: false, applyingRemote: false };
+var mpNetCounter = 0;
+var mpLastSnapshot = new Map();
 
 /* ========== BLOCKLY ========== */
 const KEY_OPTIONS = [
