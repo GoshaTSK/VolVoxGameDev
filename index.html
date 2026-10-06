@@ -5260,31 +5260,6 @@ function mpHost(){
   toast('🔗 Подключение к ' + code + '…');
 }
 
-    conn.on('data', (data) => mpOnMessage(data));
-
-    conn.on('close', () => {
-      toast('👋 Соединение закрыто');
-      mpLeave(false);
-    });
-
-    conn.on('error', (e) => console.warn('conn error', e));
-  });
-
-  MP.peer.on('error', (e) => {
-    console.error('Peer error:', e);
-    toast('❌ Не удалось подключиться: ' + e.type);
-    mpLeave(false);
-  });
-
-  setTimeout(() => {
-    if(MP.active && !MP.isHost && MP.peers.size === 0){
-      toast('⚠ Нет ответа. Проверьте код и что хост в сети.');
-    }
-  }, 5000);
-
-  mpRenderUI();
-  toast('🔗 Подключение к ' + code + '…');
-}
 function mpLeave(showMsg){
   if(!MP.active) return;
   try{ mpBroadcast({ t:'bye', id: MP.myId }); }catch(_){}
@@ -5295,13 +5270,6 @@ function mpLeave(showMsg){
   MP.active = false; MP.isHost = false; MP.roomCode = null;
   if(showMsg) toast('🚪 Вы покинули комнату');
   mpRenderUI();
-}
-function mpSendRaw(conn, msg){
-  if(!conn || !conn.open) return;
-  try{ conn.send({ ...msg, from: MP.myId, ts: Date.now() }); }catch(e){ console.warn('send', e); }
-}
-function mpSendTo(conn, msg){
-  mpSendRaw(conn, msg);
 }
 function mpBroadcast(msg){
   if(!MP.client || !MP.roomCode) return;
