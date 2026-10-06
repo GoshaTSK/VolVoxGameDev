@@ -1869,11 +1869,24 @@ function addObject(type, opts = {}){
   }
   getActiveGroup().add(obj);
   objects.push(obj);
+
+  if(!obj.userData.netId && MP.active && !MP.applyingRemote){
+    obj.userData.netId = MP.myId + '_' + (++mpNetCounter);
+  }
+  if(MP.active && !MP.applyingRemote && obj.userData.netId){
+    mpBroadcast({ t:'obj_add', netId: obj.userData.netId, data: serializeObject(obj) });
+    mpLastSnapshot.set(obj.userData.netId, mpHashObj(obj));
+  }
+
   refreshSceneList();
   return obj;
 }
 function removeObject(obj){
   if(!obj) return;
+    if(MP.active && !MP.applyingRemote && obj.userData.netId){
+    mpBroadcast({ t:'obj_del', netId: obj.userData.netId });
+    mpLastSnapshot.delete(obj.userData.netId);
+  }
   const i = objects.indexOf(obj); if(i >= 0) objects.splice(i, 1);
   if(selBoxOwner === obj) detachSelectionOutline();
   if(obj.userData._rt && obj.userData._rt.saySprite){
@@ -3563,6 +3576,7 @@ function serializeObject(o){
     rampAngle: o.userData.rampAngle,
     blocklyXml: o.userData.blocklyXml || '',
     label: o.userData.label,
+    netId: o.userData.netId || null,
   };
 }
 function saveProject(){
@@ -3587,6 +3601,9 @@ function saveProject(){
 }
 function loadProjectData(data){
   if(!data || typeof data !== 'object'){ toast('❌ Неверный файл'); return; }
+    const _mpWasApplying = MP.applyingRemote;
+  MP.applyingRemote = true;
+  try{
   if(data.app && data.app !== 'VolVoxGameDev' && !data.objects3d && !data.objects2d){
     toast('❌ Неверный формат'); return;
   }
@@ -3621,6 +3638,8 @@ function loadProjectData(data){
       if(dd.texture && dd.texture !== 'none') applyTextureToObject(o, dd.texture);
       if(dd.color) setColor(o, dd.color);
       if(dd.label) o.userData.label = dd.label;
+      if(dd.netId) o.userData.netId = dd.netId;
+      mpLastSnapshot.set(o.userData.netId, mpHashObj(o));      
     });
     objects = saved;
   };
@@ -3661,6 +3680,7 @@ function loadProjectData(data){
   }
 
   toast(`📂 Проект загружен (${(data.objects3d||[]).length} 3D + ${(data.objects2d||[]).length} 2D)`);
+      } finally { MP.applyingRemote = _mpWasApplying; }
 }
 
 $('btnSave').onclick = () => saveProject();
@@ -4281,12 +4301,14 @@ function animate(){
       o.position.y = base + 0.5 + Math.sin(elapsed * 2.2 + o.id) * 0.35;
     }
   }
-    if(typeof MP !== 'undefined' && MP.active && mode === 'play'){
-    mpUpdateLocalBroadcast(dt);
-    mpInterpolatePeers(dt);
+    if(typeof MP !== 'undefined' && MP.active){
+    if(mode === 'play'){
+      mpUpdateLocalBroadcast(dt);
+      mpInterpolatePeers(dt);
+    }
+    mpScanAndSyncScene();
   }
   renderer.render(scene, activeCamera);
-}
 
   /* ========== 3D MODELER ========== */
 const customModels = {};
@@ -4970,7 +4992,13 @@ var MP = {
   myId: 'p_' + Math.random().toString(36).slice(2, 9),
   myName: 'Игрок', channel: null, peers: new Map(),
   lastBroadcast: 0, BROADCAST_INTERVAL: 0.05,
+  pvp: false,
+  applyingRemote: false,
+  lastSyncBroadcast: 0,
+  SYNC_INTERVAL: 60,
 };
+var mpNetCounter = 0;
+var mpLastSnapshot = new Map();
 var MP_COLORS = ['#38bdf8','#f472b6','#fbbf24','#34d399','#f87171','#a855f7','#22d3ee','#fb7185'];
 function mpEscape(s){
   return String(s == null ? '' : s)
@@ -5096,6 +5124,7 @@ function mpHost(){
   MP.roomCode = mpGenCode();
   MP.isHost = true;
   MP.active = true;
+  mpAssignNetIdsToScene();
   try{
     MP.channel = new BroadcastChannel('vvg-mp-' + MP.roomCode);
     MP.channel.onmessage = (ev) => mpOnMessage(ev.data);
@@ -5108,6 +5137,7 @@ function mpJoin(code){
   MP.roomCode = code;
   MP.isHost = false;
   MP.active = true;
+  mpAssignNetIdsToScene();
   try{
     MP.channel = new BroadcastChannel('vvg-mp-' + code);
     MP.channel.onmessage = (ev) => mpOnMessage(ev.data);
@@ -5135,10 +5165,68 @@ function mpBroadcast(msg){
   if(!MP.channel) return;
   try{ MP.channel.postMessage({ ...msg, from: MP.myId, ts: Date.now() }); }catch(_){}
 }
+  function mpHashObj(o){
+  return [
+    o.position.x.toFixed(2), o.position.y.toFixed(2), o.position.z.toFixed(2),
+    o.rotation.x.toFixed(2), o.rotation.y.toFixed(2), o.rotation.z.toFixed(2),
+    o.scale.x.toFixed(2), o.scale.y.toFixed(2), o.scale.z.toFixed(2),
+    o.visible ? 1 : 0,
+    o.userData.texture || 'none',
+    o.userData.solid ? 1 : 0,
+    o.userData.hp || 0,
+    o.userData.invulnerable ? 1 : 0,
+    (o.userData.blocklyXml || '').length,
+    o.userData.label || ''
+  ].join('|');
+}
+function mpAssignNetIdsToScene(){
+  for(const dim of ['3d','2d']){
+    for(const o of objectsByDim[dim]){
+      if(!o.userData.netId){
+        o.userData.netId = MP.myId + '_' + (++mpNetCounter);
+      }
+    }
+  }
+}
+function mpApplyNetData(o, dd){
+  o.position.set(dd.x, dd.z, dd.y);
+  o.rotation.set(0, dd.ry, 0);
+  o.scale.set(dd.sx, dd.sy, dd.sz);
+  o.userData.solid = !!dd.solid;
+  o.userData.layer2D = dd.layer2D || 0;
+  o.userData.texture = dd.texture || 'none';
+  o.userData.invulnerable = !!dd.invulnerable;
+  o.userData.hp = dd.hp ?? 0;
+  o.userData.maxHp = dd.maxHp ?? 0;
+  if(dd.label) o.userData.label = dd.label;
+  if(dd.color) setColor(o, dd.color);
+  if(dd.blocklyXml && o.userData.blocklyXml !== dd.blocklyXml){
+    o.userData.blocklyXml = dd.blocklyXml;
+  }
+  if(dd.texture && dd.texture !== 'none') applyTextureToObject(o, dd.texture);
+}
+function mpScanAndSyncScene(){
+  if(!MP.active || MP.applyingRemote) return;
+  const now = performance.now();
+  if(now - MP.lastSyncBroadcast < MP.SYNC_INTERVAL) return;
+  MP.lastSyncBroadcast = now;
+  const batch = [];
+  for(const o of objects){
+    if(!o.userData.netId) continue;
+    const h = mpHashObj(o);
+    const prev = mpLastSnapshot.get(o.userData.netId);
+    if(prev === undefined){ mpLastSnapshot.set(o.userData.netId, h); continue; }
+    if(prev !== h){
+      mpLastSnapshot.set(o.userData.netId, h);
+      batch.push({ netId: o.userData.netId, data: serializeObject(o) });
+    }
+  }
+  if(batch.length) mpBroadcast({ t:'obj_batch', items: batch });
+}
 $('btnMultiplayer').onclick = mpOpenModal;
 $('btnMpClose').onclick = mpCloseModal;
 $('mpModal').addEventListener('click', e => { if(e.target === $('mpModal')) mpCloseModal(); });
-  function mpOnMessage(msg){
+ function mpOnMessage(msg){
   if(!msg || msg.from === MP.myId) return;
   let needsUi = false;
   switch(msg.t){
@@ -5163,6 +5251,50 @@ $('mpModal').addEventListener('click', e => { if(e.target === $('mpModal')) mpCl
       break;
     case 'shoot':
       mpRemoteShoot(msg);
+      break;
+    case 'obj_add':
+      MP.applyingRemote = true;
+      try{
+        if(!objects.find(o => o.userData.netId === msg.netId)){
+          const dd = msg.data;
+          const o = addObject(dd.type, {
+            x: dd.x, y: dd.y, z: dd.z, ry: dd.ry,
+            hp: dd.maxHp, zoneRadius: dd.zoneRadius, rampAngle: dd.rampAngle,
+            invulnerable: dd.invulnerable, label: dd.label
+          });
+          o.userData.netId = msg.netId;
+          mpApplyNetData(o, dd);
+          mpLastSnapshot.set(msg.netId, mpHashObj(o));
+        }
+      } finally { MP.applyingRemote = false; }
+      break;
+    case 'obj_del':
+      {
+        const o = objects.find(x => x.userData.netId === msg.netId);
+        if(o){
+          MP.applyingRemote = true;
+          try{ removeObject(o); } finally { MP.applyingRemote = false; }
+          mpLastSnapshot.delete(msg.netId);
+        }
+      }
+      break;
+    case 'obj_batch':
+      MP.applyingRemote = true;
+      try{
+        for(const item of (msg.items || [])){
+          const o = objects.find(x => x.userData.netId === item.netId);
+          if(!o) continue;
+          mpApplyNetData(o, item.data);
+          mpLastSnapshot.set(item.netId, mpHashObj(o));
+        }
+        if(selected) renderInspector();
+      } finally { MP.applyingRemote = false; }
+      break;
+    case 'damage':
+      if(msg.target === MP.myId){
+        const n = Math.max(0, Math.round(msg.amount || 1));
+        for(let i = 0; i < n; i++) onPlayerHit();
+      }
       break;
     case 'bye':
       mpRemovePeer(msg.id);
