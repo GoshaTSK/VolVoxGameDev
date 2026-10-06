@@ -713,7 +713,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/blockly@10.4.3/blockly.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -5001,9 +5001,11 @@ var MP = {
   applyingRemote: false,
   lastSyncBroadcast: 0,
   SYNC_INTERVAL: 60,
-  peer: null,
-  conn: null,
+  client: null,
+  MQTT_URL: 'wss://broker.emqx.io:8084/mqtt',
 };
+var mpNetCounter = 0;
+var mpLastSnapshot = new Map();
 var mpNetCounter = 0;
 var mpLastSnapshot = new Map();
 var MP_COLORS = ['#38bdf8','#f472b6','#fbbf24','#34d399','#f87171','#a855f7','#22d3ee','#fb7185'];
@@ -5133,21 +5135,51 @@ function mpHost(){
   MP.active = true;
   mpAssignNetIdsToScene();
 
-  if(typeof Peer === 'undefined'){
-    toast('❌ PeerJS не загрузился (нет интернета?)');
+  if(typeof mqtt === 'undefined'){
+    toast('❌ MQTT-клиент не загрузился');
     MP.active = false;
     return;
   }
 
+  const clientId = 'vvg_' + MP.myId + '_' + Math.random().toString(36).slice(2, 6);
   try{
-    MP.peer = new Peer('vvg-' + MP.roomCode, { debug: 1 });
+    MP.client = mqtt.connect(MP.MQTT_URL, {
+      clientId,
+      clean: true,
+      connectTimeout: 8000,
+      reconnectPeriod: 3000,
+    });
   }catch(e){
     console.error(e);
-    toast('❌ Ошибка создания Peer');
+    toast('❌ Ошибка подключения к MQTT');
     MP.active = false;
     return;
   }
 
+  const topic = 'vvg/room/' + MP.roomCode;
+
+  MP.client.on('connect', () => {
+    console.log('MQTT подключён:', clientId);
+    MP.client.subscribe(topic, { qos: 0 }, (err) => {
+      if(err){ toast('❌ Не удалось подписаться'); return; }
+      mpRenderUI();
+      toast('📡 Комната ' + MP.roomCode + ' создана');
+    });
+  });
+
+  MP.client.on('message', (topic, payload) => {
+    let msg;
+    try{ msg = JSON.parse(payload.toString()); }catch(_){ return; }
+    mpOnMessage(msg);
+  });
+
+  MP.client.on('error', (e) => {
+    console.error('MQTT error', e);
+    toast('❌ MQTT: ' + (e.message || 'ошибка'));
+  });
+
+  mpRenderUI();
+}
   MP.peer.on('open', (id) => {
     console.log('Peer открыт:', id);
     mpRenderUI();
@@ -5194,32 +5226,59 @@ function mpJoin(code){
   MP.active = true;
   mpAssignNetIdsToScene();
 
-  if(typeof Peer === 'undefined'){
-    toast('❌ PeerJS не загрузился');
+  if(typeof mqtt === 'undefined'){
+    toast('❌ MQTT-клиент не загрузился');
     MP.active = false;
     return;
   }
 
+  const clientId = 'vvg_' + MP.myId + '_' + Math.random().toString(36).slice(2, 6);
   try{
-    MP.peer = new Peer({ debug: 1 });
+    MP.client = mqtt.connect(MP.MQTT_URL, {
+      clientId,
+      clean: true,
+      connectTimeout: 8000,
+      reconnectPeriod: 3000,
+    });
   }catch(e){
     console.error(e);
-    toast('❌ Ошибка создания Peer');
+    toast('❌ Ошибка подключения к MQTT');
     MP.active = false;
     return;
   }
 
-  MP.peer.on('open', () => {
-    console.log('Подключаюсь к vvg-' + code);
-    const conn = MP.peer.connect('vvg-' + code, { reliable: true });
-    MP.conn = conn;
+  const topic = 'vvg/room/' + MP.roomCode;
 
-    conn.on('open', () => {
-      console.log('Соединение открыто');
-      mpSendTo(conn, { t:'hello', id: MP.myId, name: MP.myName });
+  MP.client.on('connect', () => {
+    console.log('MQTT подключён (гость):', clientId);
+    MP.client.subscribe(topic, { qos: 0 }, (err) => {
+      if(err){ toast('❌ Не удалось подписаться'); return; }
+      mpBroadcast({ t:'hello', id: MP.myId, name: MP.myName });
       toast('🔗 Подключено к ' + code);
       mpRenderUI();
     });
+  });
+
+  MP.client.on('message', (topic, payload) => {
+    let msg;
+    try{ msg = JSON.parse(payload.toString()); }catch(_){ return; }
+    mpOnMessage(msg);
+  });
+
+  MP.client.on('error', (e) => {
+    console.error('MQTT error', e);
+    toast('❌ MQTT: ' + (e.message || 'ошибка'));
+  });
+
+  setTimeout(() => {
+    if(MP.active && !MP.isHost && MP.peers.size === 0){
+      toast('⚠ Нет ответа. Проверьте код.');
+    }
+  }, 5000);
+
+  mpRenderUI();
+  toast('🔗 Подключение к ' + code + '…');
+}
 
     conn.on('data', (data) => mpOnMessage(data));
 
@@ -5248,13 +5307,11 @@ function mpJoin(code){
 }
 function mpLeave(showMsg){
   if(!MP.active) return;
-  try{ MP.conn && mpSendRaw(MP.conn, { t:'bye', id: MP.myId }); }catch(_){}
+  try{ mpBroadcast({ t:'bye', id: MP.myId }); }catch(_){}
   for(const [, peer] of MP.peers) mpDestroyGhost(peer);
   MP.peers.clear();
-  try{ MP.conn && MP.conn.close(); }catch(_){}
-  try{ MP.peer && MP.peer.destroy(); }catch(_){}
-  MP.conn = null;
-  MP.peer = null;
+  try{ MP.client && MP.client.end(true); }catch(_){}
+  MP.client = null;
   MP.active = false; MP.isHost = false; MP.roomCode = null;
   if(showMsg) toast('🚪 Вы покинули комнату');
   mpRenderUI();
@@ -5267,7 +5324,11 @@ function mpSendTo(conn, msg){
   mpSendRaw(conn, msg);
 }
 function mpBroadcast(msg){
-  if(MP.conn) mpSendRaw(MP.conn, msg);
+  if(!MP.client || !MP.roomCode) return;
+  try{
+    const payload = JSON.stringify({ ...msg, from: MP.myId, ts: Date.now() });
+    MP.client.publish('vvg/room/' + MP.roomCode, payload, { qos: 0 });
+  }catch(e){ console.warn('mqtt publish', e); }
 }
   function mpHashObj(o){
   return [
