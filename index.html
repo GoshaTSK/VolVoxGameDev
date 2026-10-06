@@ -490,6 +490,63 @@
   .pal-item.custom::before{top:4px;right:auto;left:4px}
   .btn.modeler{background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;border-color:transparent;font-weight:800}
   #settingsModal .modal-buttons{margin-top:20px}
+  /* ============ MULTIPLAYER ============ */
+.btn.mp{background:linear-gradient(135deg,#06b6d4,#8b5cf6);color:#fff;border-color:transparent;font-weight:800}
+.mp-modal{position:fixed;inset:0;z-index:260;display:none;align-items:center;justify-content:center;
+  background:rgba(3,6,12,.88);backdrop-filter:blur(8px);padding:20px}
+.mp-modal.active{display:flex;animation:fadeIn .2s}
+.mp-panel{width:100%;max-width:560px;background:#0c1728;border:1px solid var(--border);border-radius:16px;
+  overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.75);display:flex;flex-direction:column;max-height:92vh}
+.mp-head{display:flex;align-items:center;gap:12px;padding:16px 22px;
+  border-bottom:1px solid var(--border);background:linear-gradient(180deg,#101d33,#0c1728)}
+.mp-head h2{font-size:17px;font-weight:800;display:flex;align-items:center;gap:10px}
+.mp-body{padding:22px;overflow-y:auto;flex:1}
+.mp-section{margin-bottom:22px}
+.mp-section h3{font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;
+  color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.mp-section h3::before{content:'';width:3px;height:10px;background:var(--accent);border-radius:2px}
+.mp-input{width:100%;padding:11px 14px;background:#0a1424;border:1px solid var(--border);
+  border-radius:10px;color:#fff;font:inherit;font-size:14px;outline:none;transition:.15s}
+.mp-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(56,189,248,.15)}
+.mp-input.code{font-family:ui-monospace,Menlo,monospace;letter-spacing:6px;text-transform:uppercase;font-weight:800;text-align:center}
+.mp-input::placeholder{letter-spacing:normal;text-transform:none;color:#5a6d87;font-weight:400}
+.mp-row{display:flex;gap:8px}
+.mp-row .mp-input{flex:1}
+.mp-btn{font:inherit;font-weight:700;font-size:13px;padding:11px 18px;border-radius:10px;
+  cursor:pointer;border:1px solid var(--border);background:#16233c;color:var(--text);
+  transition:.15s;white-space:nowrap;font-family:inherit}
+.mp-btn:hover{background:#1d2f4f;border-color:#31486e}
+.mp-btn.primary{background:linear-gradient(135deg,#06b6d4,#0891b2);color:#fff;border-color:transparent}
+.mp-btn.primary:hover{box-shadow:0 6px 18px rgba(6,182,212,.4);transform:translateY(-1px)}
+.mp-btn.danger{background:#3b1414;color:#fca5a5;border-color:#7f1d1d}
+.mp-btn.danger:hover{background:#4c1a1a;border-color:#9a2323}
+.mp-room-code{background:#0a1424;border:1px dashed #38bdf8;border-radius:12px;
+  padding:16px;text-align:center;margin:12px 0}
+.mp-room-code .lbl{font-size:10.5px;font-weight:800;letter-spacing:1.5px;
+  color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+.mp-room-code .code{font:800 32px/1 ui-monospace,Menlo,monospace;color:#7dd3fc;
+  letter-spacing:8px;text-shadow:0 0 20px rgba(56,189,248,.5);user-select:all;cursor:pointer;
+  padding:4px 0;border-radius:8px;transition:.15s}
+.mp-room-code .code:hover{background:rgba(56,189,248,.08)}
+.mp-room-code .hint{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.mp-status{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;
+  font-size:12.5px;font-weight:600;margin-bottom:14px;
+  background:#0a1f10;border:1px solid #166534;color:#86efac;line-height:1.4}
+.mp-status.err{background:#3b0f0f;border-color:#b91c1c;color:#fca5a5}
+.mp-status.warn{background:#1e1b4b;border-color:#6d28d9;color:#c4b5fd}
+.mp-status .dot{width:8px;height:8px;border-radius:50%;background:#22c55e;
+  box-shadow:0 0 10px #22c55e;animation:pulseDot 1.6s ease-in-out infinite;flex:none}
+.mp-peers{list-style:none;display:flex;flex-direction:column;gap:6px}
+.mp-peer{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;
+  background:#0a1424;border:1px solid var(--border);font-size:13px}
+.mp-peer .avatar{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;
+  font-weight:800;font-size:12px;color:#04101f;flex:none}
+.mp-peer .nm{flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mp-peer .role{font-size:9.5px;font-weight:800;letter-spacing:.5px;padding:2px 7px;
+  border-radius:5px;text-transform:uppercase}
+.mp-peer .role.host{background:#4c1d95;color:#e9d5ff}
+.mp-peer .role.guest{background:#0a1e28;color:#7dd3fc}
+.mp-peer .role.me{background:#0891b2;color:#fff}
 </style>
 </head>
 <body>
@@ -514,6 +571,7 @@
     <input type="file" id="fileLoad" accept=".json,application/json" style="display:none">
     <button class="btn modeler" id="btnModeler" title="3D-моделлер">🎨 Моделлер</button>
     <button class="btn games" id="btnGames">🎮 Примеры</button>
+    <button class="btn mp" id="btnMultiplayer">🌐 Мультиплеер</button>
     <button class="btn" id="btnGuide">📖 Гайд</button>
     <button class="btn transfer" id="btnTo2D">→ 2D</button>
     <button class="btn transfer" id="btnTo3D">→ 3D</button>
@@ -623,7 +681,17 @@
   </section>
 </div>
 
-<div class="games-modal" id="gamesModal">
+<div class="mp-modal" id="mpModal">
+  <div class="mp-panel">
+    <div class="mp-head">
+      <h2><span>🌐</span> Мультиплеер</h2>
+      <div style="flex:1"></div>
+      <button class="btn" id="btnMpClose">✕ Закрыть</button>
+    </div>
+    <div class="mp-body" id="mpBody"></div>
+  </div>
+</div>
+  <div class="games-modal" id="gamesModal">
   <div class="games-panel">
     <div class="games-head">
       <h2><span>🕹️</span> Легендарные игры</h2>
@@ -5118,7 +5186,6 @@ setTimeout(checkPendingProgram, 500);
     #btnGuide.on{background:linear-gradient(135deg,#166534,#22c55e);border-color:#22c55e;color:#fff}
   `;
   document.head.appendChild(css);
-
   /* ---------- 2. HTML ПАНЕЛИ ---------- */
   var panel = document.createElement('div');
   panel.id = 'guidePanelV2';
