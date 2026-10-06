@@ -4281,7 +4281,7 @@ function animate(){
       o.position.y = base + 0.5 + Math.sin(elapsed * 2.2 + o.id) * 0.35;
     }
   }
-    if(MP.active && mode === 'play'){
+    if(typeof MP !== 'undefined' && MP.active && mode === 'play'){
     mpUpdateLocalBroadcast(dt);
     mpInterpolatePeers(dt);
   }
