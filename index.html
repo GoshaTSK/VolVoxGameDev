@@ -22,34 +22,7 @@
     overflow-x:auto;scrollbar-width:none}
   #topbar::-webkit-scrollbar{display:none}
   /* ==== GUIDE PANEL ==== */
-  .guide-panel{position:fixed;z-index:150;right:20px;top:70px;
-    width:min(900px, 85vw);height:min(85vh, 900px);
-    background:#0f1a2e;border:1px solid var(--border);border-radius:14px;
-    box-shadow:0 24px 60px rgba(0,0,0,.75);
-    display:none;flex-direction:column;overflow:hidden;min-width:400px;min-height:300px}
-  .guide-panel.active{display:flex;animation:guideSlideIn .28s ease-out}
-  @keyframes guideSlideIn{from{transform:translateX(80px);opacity:0}to{transform:translateX(0);opacity:1}}
-  .guide-panel.maximized{right:0;top:54px;width:100vw;height:calc(100vh - 54px);border-radius:0;left:0}
-  .guide-panel-head{display:flex;align-items:center;gap:10px;padding:10px 14px;
-    background:linear-gradient(180deg,#101d33,#0c1728);border-bottom:1px solid var(--border);
-    cursor:grab;user-select:none;flex:none}
-  .guide-panel-head:active{cursor:grabbing}
-  .guide-panel-title{font-size:13px;font-weight:800;flex:1;color:#fff}
-  .guide-panel-actions{display:flex;gap:6px}
-  .guide-panel-btn{border:0;background:rgba(255,255,255,.06);color:#dbe6f6;
-    width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;
-    display:grid;place-items:center;transition:.15s;font-family:inherit}
-  .guide-panel-btn:hover{background:rgba(255,255,255,.15)}
-  .guide-panel-btn.close:hover{background:#b91c1c}
-  .guide-panel-body{flex:1;min-height:0;background:#0a1424;position:relative}
-  .guide-panel-body iframe{width:100%;height:100%;border:0;display:block}
-  .guide-panel-resize{position:absolute;right:0;bottom:0;width:16px;height:16px;
-    cursor:nwse-resize;z-index:2;
-    background:linear-gradient(135deg,transparent 45%,var(--accent) 45%,var(--accent) 55%,transparent 55%),
-               linear-gradient(135deg,transparent 65%,var(--accent) 65%,var(--accent) 72%,transparent 72%);
-    border-bottom-right-radius:14px}
-  .guide-panel-resize:hover{filter:brightness(1.4)}
-  .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px;white-space:nowrap}
+   .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px;white-space:nowrap}
   .logo-mark{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:14px;
     background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#04101f;
     box-shadow:0 0 18px rgba(56,189,248,.35)}
@@ -707,22 +680,6 @@
     </div>
   </div>
 </div>
-
-<!-- ==== GUIDE PANEL ==== -->
-<div id="guidePanel" class="guide-panel">
-  <div class="guide-panel-head" id="guidePanelHead">
-    <span class="guide-panel-title">📖 Гайд по программированию</span>
-    <div class="guide-panel-actions">
-      <button class="guide-panel-btn" id="guidePanelMax" title="Развернуть на весь экран">⛶</button>
-      <button class="guide-panel-btn close" id="guidePanelClose" title="Закрыть">✕</button>
-    </div>
-  </div>
-  <div class="guide-panel-body">
-    <iframe id="guideFrame" src="about:blank" loading="lazy" title="Гайд"></iframe>
-  </div>
-  <div class="guide-panel-resize" id="guidePanelResize"></div>
-</div>
-
   <!-- ============ 3D MODELER MODAL ============ -->
 <div class="modeler-modal" id="modelerModal">
   <div class="modeler-panel">
@@ -5002,145 +4959,6 @@ window.addEventListener('storage', (e) => {
   }catch(_){}
 });
 setTimeout(checkPendingProgram, 500);
-</script>
-<script>
-/* ==== GUIDE PANEL LOGIC ==== */
-(function(){
-  const panel   = document.getElementById('guidePanel');
-  const head    = document.getElementById('guidePanelHead');
-  const frame   = document.getElementById('guideFrame');
-  const btnClose= document.getElementById('guidePanelClose');
-  const btnMax  = document.getElementById('guidePanelMax');
-  const resizeEl= document.getElementById('guidePanelResize');
-  const openBtn = document.getElementById('btnGuide');
-  if(!panel || !openBtn) return;
-
-  let loaded = false;
-
-  function openGuide(){
-    if(!loaded){
-      frame.src = 'guide.html';
-      loaded = true;
-    }
-    try{
-      const saved = localStorage.getItem('vvg_guide_geom');
-      if(saved){
-        const p = JSON.parse(saved);
-        if(p.maximized){
-          panel.classList.add('maximized');
-        } else {
-          if(p.w) panel.style.width  = p.w + 'px';
-          if(p.h) panel.style.height = p.h + 'px';
-          if(p.left != null){
-            panel.style.left  = p.left + 'px';
-            panel.style.top   = p.top  + 'px';
-            panel.style.right = 'auto';
-          }
-        }
-      }
-    }catch(_){}
-    panel.classList.add('active');
-    openBtn.classList.add('on');
-  }
-  function closeGuide(){
-    panel.classList.remove('active');
-    openBtn.classList.remove('on');
-  }
-  openBtn.onclick = () => {
-    if(panel.classList.contains('active')) closeGuide();
-    else openGuide();
-  };
-  btnClose.onclick = closeGuide;
-
-  btnMax.onclick = () => {
-    panel.classList.toggle('maximized');
-    if(!panel.classList.contains('maximized')){
-      panel.style.width  = '';
-      panel.style.height = '';
-      panel.style.left   = '';
-      panel.style.top    = '';
-      panel.style.right  = '20px';
-    } else {
-      panel.style.left  = '0';
-      panel.style.top   = '54px';
-      panel.style.right = 'auto';
-    }
-    saveGeom();
-    setTimeout(() => { try{ window.dispatchEvent(new Event('resize')); }catch(_){} }, 100);
-  };
-
-  let dragging = false, dragOffX = 0, dragOffY = 0;
-  head.addEventListener('pointerdown', (e) => {
-    if(e.target.closest('button')) return;
-    if(panel.classList.contains('maximized')) return;
-    const r = panel.getBoundingClientRect();
-    dragOffX = e.clientX - r.left;
-    dragOffY = e.clientY - r.top;
-    dragging = true;
-    head.setPointerCapture(e.pointerId);
-    e.preventDefault();
-  });
-  head.addEventListener('pointermove', (e) => {
-    if(!dragging) return;
-    let nx = e.clientX - dragOffX;
-    let ny = e.clientY - dragOffY;
-    const maxL = window.innerWidth  - 80;
-    const maxT = window.innerHeight - 60;
-    nx = Math.max(-panel.offsetWidth + 100, Math.min(maxL, nx));
-    ny = Math.max(54, Math.min(maxT, ny));
-    panel.style.left  = nx + 'px';
-    panel.style.top   = ny + 'px';
-    panel.style.right = 'auto';
-  });
-  head.addEventListener('pointerup', (e) => {
-    if(!dragging) return;
-    dragging = false;
-    try{ head.releasePointerCapture(e.pointerId); }catch(_){}
-    saveGeom();
-  });
-
-  let resizing = false, rW = 0, rH = 0, rX = 0, rY = 0;
-  resizeEl.addEventListener('pointerdown', (e) => {
-    e.stopPropagation();
-    if(panel.classList.contains('maximized')) return;
-    const r = panel.getBoundingClientRect();
-    rW = r.width; rH = r.height;
-    rX = e.clientX; rY = e.clientY;
-    resizing = true;
-    resizeEl.setPointerCapture(e.pointerId);
-    e.preventDefault();
-  });
-  resizeEl.addEventListener('pointermove', (e) => {
-    if(!resizing) return;
-    const nw = Math.max(400, rW + (e.clientX - rX));
-    const nh = Math.max(300, rH + (e.clientY - rY));
-    panel.style.width  = nw + 'px';
-    panel.style.height = nh + 'px';
-  });
-  resizeEl.addEventListener('pointerup', (e) => {
-    if(!resizing) return;
-    resizing = false;
-    try{ resizeEl.releasePointerCapture(e.pointerId); }catch(_){}
-    saveGeom();
-    setTimeout(() => { try{ window.dispatchEvent(new Event('resize')); }catch(_){} }, 80);
-  });
-
-  function saveGeom(){
-    const r = panel.getBoundingClientRect();
-    try{
-      localStorage.setItem('vvg_guide_geom', JSON.stringify({
-        left: r.left, top: r.top, w: r.width, h: r.height,
-        maximized: panel.classList.contains('maximized')
-      }));
-    }catch(_){}
-  }
-
-  window.addEventListener('keydown', (e) => {
-    if(e.key === 'Escape' && panel.classList.contains('active')){
-      closeGuide();
-    }
-  });
-})();
 </script>
   <script>
 /* ============================================================
