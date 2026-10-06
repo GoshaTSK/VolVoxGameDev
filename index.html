@@ -4959,6 +4959,30 @@ window.addEventListener('storage', (e) => {
   }catch(_){}
 });
 setTimeout(checkPendingProgram, 500);
+  /* ============ MULTIPLAYER — Часть 1 ============ */
+const MP = {
+  active: false, isHost: false, roomCode: null,
+  myId: 'p_' + Math.random().toString(36).slice(2, 9),
+  myName: 'Игрок', channel: null, peers: new Map(),
+  lastBroadcast: 0, BROADCAST_INTERVAL: 0.05,
+};
+const MP_COLORS = ['#38bdf8','#f472b6','#fbbf24','#34d399','#f87171','#a855f7','#22d3ee','#fb7185'];
+function mpEscape(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function mpColorFor(id){
+  let h = 0;
+  for(let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return MP_COLORS[Math.abs(h) % MP_COLORS.length];
+}
+function mpGenCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for(let i = 0; i < 5; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
 </script>
   <script>
 /* ============================================================
