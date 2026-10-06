@@ -5238,28 +5238,6 @@ function mpHost(){
   mpRenderUI();
   toast('🔗 Подключение к ' + code + '…');
 }
-
-  MP.client.on('message', (topic, payload) => {
-    let msg;
-    try{ msg = JSON.parse(payload.toString()); }catch(_){ return; }
-    mpOnMessage(msg);
-  });
-
-  MP.client.on('error', (e) => {
-    console.error('MQTT error', e);
-    toast('❌ MQTT: ' + (e.message || 'ошибка'));
-  });
-
-  setTimeout(() => {
-    if(MP.active && !MP.isHost && MP.peers.size === 0){
-      toast('⚠ Нет ответа. Проверьте код.');
-    }
-  }, 5000);
-
-  mpRenderUI();
-  toast('🔗 Подключение к ' + code + '…');
-}
-
 function mpLeave(showMsg){
   if(!MP.active) return;
   try{ mpBroadcast({ t:'bye', id: MP.myId }); }catch(_){}
