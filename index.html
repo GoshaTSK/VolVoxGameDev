@@ -4983,6 +4983,156 @@ function mpGenCode(){
   for(let i = 0; i < 5; i++) s += chars[Math.floor(Math.random() * chars.length)];
   return s;
 }
+  function mpRenderUI(){
+  const modal = $('mpModal');
+  if(!modal) return;
+  if(!modal.classList.contains('active') && MP.active) return;
+  const body = $('mpBody');
+  if(!body) return;
+  if(!MP.active){
+    body.innerHTML = `
+      <div class="mp-section">
+        <h3>Ваше имя</h3>
+        <input type="text" class="mp-input" id="mpNameInp" maxlength="16"
+               value="${mpEscape(MP.myName)}" placeholder="Игрок">
+      </div>
+      <div class="mp-section">
+        <h3>Создать комнату</h3>
+        <p style="font-size:12.5px;color:#a9bcd4;margin-bottom:10px;line-height:1.5">
+          Вы станете <b>хостом</b>. Ваш текущий проект отправится присоединившимся.
+        </p>
+        <button class="mp-btn primary" id="mpHostBtn" style="width:100%">📡 Создать комнату</button>
+      </div>
+      <div class="mp-section">
+        <h3>Присоединиться</h3>
+        <p style="font-size:12.5px;color:#a9bcd4;margin-bottom:10px;line-height:1.5">
+          Введите код комнаты от хоста.
+        </p>
+        <div class="mp-row">
+          <input type="text" class="mp-input code" id="mpCodeInp" maxlength="5" placeholder="КОД">
+          <button class="mp-btn primary" id="mpJoinBtn">🔗 Войти</button>
+        </div>
+      </div>
+      <div class="mp-status warn">
+        <span>💡</span>
+        Откройте игру во <b>второй вкладке</b> — так подключается Игрок 2.
+      </div>
+    `;
+    $('mpHostBtn').onclick = () => {
+      MP.myName = ($('mpNameInp').value.trim() || 'Хост').slice(0, 16);
+      mpHost();
+    };
+    $('mpJoinBtn').onclick = () => {
+      const code = $('mpCodeInp').value.trim().toUpperCase();
+      if(code.length < 4){ toast('Введите код'); return; }
+      MP.myName = ($('mpNameInp').value.trim() || 'Игрок').slice(0, 16);
+      mpJoin(code);
+    };
+    return;
+  }
+  const peersArr = [...MP.peers.values()];
+  const meColor = mpColorFor(MP.myId);
+  const meInitial = (MP.myName.charAt(0) || '?').toUpperCase();
+  let peersHtml = `
+    <li class="mp-peer">
+      <span class="avatar" style="background:${meColor}">${meInitial}</span>
+      <span class="nm">${mpEscape(MP.myName)} (вы)</span>
+      <span class="role me">${MP.isHost ? 'Хост' : 'Гость'}</span>
+    </li>`;
+  for(const p of peersArr){
+    const col = mpColorFor(p.id);
+    const initial = (p.name || '?').charAt(0).toUpperCase();
+    peersHtml += `
+      <li class="mp-peer">
+        <span class="avatar" style="background:${col}">${initial}</span>
+        <span class="nm">${mpEscape(p.name || 'Игрок')}</span>
+        <span class="role ${p.isHost?'host':'guest'}">${p.isHost ? 'Хост' : 'Гость'}</span>
+      </li>`;
+  }
+  body.innerHTML = `
+    <div class="mp-status">
+      <span class="dot"></span>
+      Комната активна · ${peersArr.length + 1} в сети
+    </div>
+    <div class="mp-room-code">
+      <div class="lbl">Код комнаты</div>
+      <div class="code" id="mpCodeShow">${MP.roomCode}</div>
+      <div class="hint">Кликните чтобы скопировать · откройте во второй вкладке</div>
+    </div>
+    <div class="mp-section">
+      <h3>Игроки</h3>
+      <ul class="mp-peers">${peersHtml}</ul>
+    </div>
+    <div class="mp-section">
+      <h3>Управление</h3>
+      <p style="font-size:12.5px;color:#a9bcd4;line-height:1.7;margin:0">
+        <b>Вы:</b> как обычно (WASD + ЛКМ)<br>
+        <b>Соперник:</b> в своей вкладке, вы видите призрак<br>
+        <b>Запуск:</b> жмите «▶ Играть» в обеих вкладках
+      </p>
+    </div>
+    <button class="mp-btn danger" id="mpLeaveBtn" style="width:100%">🚪 Покинуть комнату</button>
+  `;
+  const codeEl = $('mpCodeShow');
+  if(codeEl){
+    codeEl.onclick = () => {
+      try{
+        navigator.clipboard.writeText(MP.roomCode);
+        toast('📋 Код скопирован: ' + MP.roomCode);
+      }catch(_){ toast('Код: ' + MP.roomCode); }
+    };
+  }
+  $('mpLeaveBtn').onclick = () => mpLeave(true);
+}
+function mpOpenModal(){ $('mpModal').classList.add('active'); mpRenderUI(); }
+function mpCloseModal(){ $('mpModal').classList.remove('active'); }
+function mpHost(){
+  if(MP.active) mpLeave(false);
+  MP.roomCode = mpGenCode();
+  MP.isHost = true;
+  MP.active = true;
+  try{
+    MP.channel = new BroadcastChannel('vvg-mp-' + MP.roomCode);
+    MP.channel.onmessage = (ev) => mpOnMessage(ev.data);
+  }catch(e){ toast('❌ BroadcastChannel не поддерживается'); MP.active = false; return; }
+  mpRenderUI();
+  toast('📡 Комната ' + MP.roomCode + ' создана');
+}
+function mpJoin(code){
+  if(MP.active) mpLeave(false);
+  MP.roomCode = code;
+  MP.isHost = false;
+  MP.active = true;
+  try{
+    MP.channel = new BroadcastChannel('vvg-mp-' + code);
+    MP.channel.onmessage = (ev) => mpOnMessage(ev.data);
+  }catch(e){ toast('❌ BroadcastChannel не поддерживается'); MP.active = false; return; }
+  mpBroadcast({ t:'hello', id: MP.myId, name: MP.myName });
+  setTimeout(() => {
+    if(MP.active && !MP.isHost && MP.peers.size === 0){
+      toast('⚠ Нет ответа от хоста. Проверьте код.');
+    }
+  }, 2000);
+  mpRenderUI();
+  toast('🔗 Подключение к ' + code + '…');
+}
+function mpLeave(showMsg){
+  if(!MP.active) return;
+  mpBroadcast({ t:'bye', id: MP.myId });
+  for(const [, peer] of MP.peers) mpDestroyGhost(peer);
+  MP.peers.clear();
+  try{ MP.channel && MP.channel.close(); }catch(_){}
+  MP.channel = null; MP.active = false; MP.isHost = false; MP.roomCode = null;
+  if(showMsg) toast('🚪 Вы покинули комнату');
+  mpRenderUI();
+}
+function mpBroadcast(msg){
+  if(!MP.channel) return;
+  try{ MP.channel.postMessage({ ...msg, from: MP.myId, ts: Date.now() }); }catch(_){}
+}
+$('btnMultiplayer').onclick = mpOpenModal;
+$('btnMpClose').onclick = mpCloseModal;
+$('mpModal').addEventListener('click', e => { if(e.target === $('mpModal')) mpCloseModal(); });
 </script>
   <script>
 /* ============================================================
