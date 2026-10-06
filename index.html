@@ -4965,13 +4965,13 @@ window.addEventListener('storage', (e) => {
 });
 setTimeout(checkPendingProgram, 500);
   /* ============ MULTIPLAYER — Часть 1 ============ */
-const MP = {
+var MP = {
   active: false, isHost: false, roomCode: null,
   myId: 'p_' + Math.random().toString(36).slice(2, 9),
   myName: 'Игрок', channel: null, peers: new Map(),
   lastBroadcast: 0, BROADCAST_INTERVAL: 0.05,
 };
-const MP_COLORS = ['#38bdf8','#f472b6','#fbbf24','#34d399','#f87171','#a855f7','#22d3ee','#fb7185'];
+var MP_COLORS = ['#38bdf8','#f472b6','#fbbf24','#34d399','#f87171','#a855f7','#22d3ee','#fb7185'];
 function mpEscape(s){
   return String(s == null ? '' : s)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
