@@ -713,6 +713,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/blockly@10.4.3/blockly.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -5000,6 +5001,8 @@ var MP = {
   applyingRemote: false,
   lastSyncBroadcast: 0,
   SYNC_INTERVAL: 60,
+  peer: null,
+  conn: null,
 };
 var mpNetCounter = 0;
 var mpLastSnapshot = new Map();
@@ -5129,12 +5132,60 @@ function mpHost(){
   MP.isHost = true;
   MP.active = true;
   mpAssignNetIdsToScene();
+
+  if(typeof Peer === 'undefined'){
+    toast('❌ PeerJS не загрузился (нет интернета?)');
+    MP.active = false;
+    return;
+  }
+
   try{
-    MP.channel = new BroadcastChannel('vvg-mp-' + MP.roomCode);
-    MP.channel.onmessage = (ev) => mpOnMessage(ev.data);
-  }catch(e){ toast('❌ BroadcastChannel не поддерживается'); MP.active = false; return; }
+    MP.peer = new Peer('vvg-' + MP.roomCode, { debug: 1 });
+  }catch(e){
+    console.error(e);
+    toast('❌ Ошибка создания Peer');
+    MP.active = false;
+    return;
+  }
+
+  MP.peer.on('open', (id) => {
+    console.log('Peer открыт:', id);
+    mpRenderUI();
+    toast('📡 Комната ' + MP.roomCode + ' создана');
+  });
+
+  MP.peer.on('connection', (conn) => {
+    MP.conn = conn;
+    conn.on('open', () => {
+      console.log('Гость подключился');
+      const guestId = conn.peer;
+      mpEnsurePeer(guestId, 'Игрок', false);
+      // Отправляем приветствие + проект
+      mpSendTo(conn, { t: 'hi', id: MP.myId, name: MP.myName, isHost: MP.isHost });
+      try{
+        mpSendTo(conn, { t:'project', target: guestId, data: mpSerializeProject() });
+      }catch(e){ console.warn('mp project', e); }
+      mpRenderUI();
+    });
+    conn.on('data', (data) => mpOnMessage(data));
+    conn.on('close', () => {
+      toast('👋 Соединение закрыто');
+      mpLeave(false);
+    });
+    conn.on('error', (e) => console.warn('conn error', e));
+  });
+
+  MP.peer.on('error', (e) => {
+    console.error('Peer error:', e);
+    if(e.type === 'unavailable-id'){
+      toast('❌ Код занят — попробуйте снова');
+      mpLeave(false);
+    } else {
+      toast('❌ Ошибка: ' + e.type);
+    }
+  });
+
   mpRenderUI();
-  toast('📡 Комната ' + MP.roomCode + ' создана');
 }
 function mpJoin(code){
   if(MP.active) mpLeave(false);
@@ -5142,32 +5193,81 @@ function mpJoin(code){
   MP.isHost = false;
   MP.active = true;
   mpAssignNetIdsToScene();
+
+  if(typeof Peer === 'undefined'){
+    toast('❌ PeerJS не загрузился');
+    MP.active = false;
+    return;
+  }
+
   try{
-    MP.channel = new BroadcastChannel('vvg-mp-' + code);
-    MP.channel.onmessage = (ev) => mpOnMessage(ev.data);
-  }catch(e){ toast('❌ BroadcastChannel не поддерживается'); MP.active = false; return; }
-  mpBroadcast({ t:'hello', id: MP.myId, name: MP.myName });
+    MP.peer = new Peer({ debug: 1 });
+  }catch(e){
+    console.error(e);
+    toast('❌ Ошибка создания Peer');
+    MP.active = false;
+    return;
+  }
+
+  MP.peer.on('open', () => {
+    console.log('Подключаюсь к vvg-' + code);
+    const conn = MP.peer.connect('vvg-' + code, { reliable: true });
+    MP.conn = conn;
+
+    conn.on('open', () => {
+      console.log('Соединение открыто');
+      mpSendTo(conn, { t:'hello', id: MP.myId, name: MP.myName });
+      toast('🔗 Подключено к ' + code);
+      mpRenderUI();
+    });
+
+    conn.on('data', (data) => mpOnMessage(data));
+
+    conn.on('close', () => {
+      toast('👋 Соединение закрыто');
+      mpLeave(false);
+    });
+
+    conn.on('error', (e) => console.warn('conn error', e));
+  });
+
+  MP.peer.on('error', (e) => {
+    console.error('Peer error:', e);
+    toast('❌ Не удалось подключиться: ' + e.type);
+    mpLeave(false);
+  });
+
   setTimeout(() => {
     if(MP.active && !MP.isHost && MP.peers.size === 0){
-      toast('⚠ Нет ответа от хоста. Проверьте код.');
+      toast('⚠ Нет ответа. Проверьте код и что хост в сети.');
     }
-  }, 2000);
+  }, 5000);
+
   mpRenderUI();
   toast('🔗 Подключение к ' + code + '…');
 }
 function mpLeave(showMsg){
   if(!MP.active) return;
-  mpBroadcast({ t:'bye', id: MP.myId });
+  try{ MP.conn && mpSendRaw(MP.conn, { t:'bye', id: MP.myId }); }catch(_){}
   for(const [, peer] of MP.peers) mpDestroyGhost(peer);
   MP.peers.clear();
-  try{ MP.channel && MP.channel.close(); }catch(_){}
-  MP.channel = null; MP.active = false; MP.isHost = false; MP.roomCode = null;
+  try{ MP.conn && MP.conn.close(); }catch(_){}
+  try{ MP.peer && MP.peer.destroy(); }catch(_){}
+  MP.conn = null;
+  MP.peer = null;
+  MP.active = false; MP.isHost = false; MP.roomCode = null;
   if(showMsg) toast('🚪 Вы покинули комнату');
   mpRenderUI();
 }
+function mpSendRaw(conn, msg){
+  if(!conn || !conn.open) return;
+  try{ conn.send({ ...msg, from: MP.myId, ts: Date.now() }); }catch(e){ console.warn('send', e); }
+}
+function mpSendTo(conn, msg){
+  mpSendRaw(conn, msg);
+}
 function mpBroadcast(msg){
-  if(!MP.channel) return;
-  try{ MP.channel.postMessage({ ...msg, from: MP.myId, ts: Date.now() }); }catch(_){}
+  if(MP.conn) mpSendRaw(MP.conn, msg);
 }
   function mpHashObj(o){
   return [
