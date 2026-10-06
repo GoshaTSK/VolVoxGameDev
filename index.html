@@ -5074,5 +5074,233 @@ setTimeout(checkPendingProgram, 500);
   });
 })();
 </script>
+  <script>
+/* ============================================================
+   GUIDE PANEL v2 — самодостаточная версия
+   Не требует CSS, HTML, доп. обработчиков. Просто работает.
+   ============================================================ */
+(function(){
+  if(document.getElementById('guidePanelV2')) return; // уже создана
+
+  /* ---------- 1. СТИЛИ ---------- */
+  var css = document.createElement('style');
+  css.textContent = `
+    #guidePanelV2{position:fixed;z-index:150;right:20px;top:70px;
+      width:min(900px, 85vw);height:min(85vh, 900px);
+      background:#0f1a2e;border:1px solid #22334f;border-radius:14px;
+      box-shadow:0 24px 60px rgba(0,0,0,.75);
+      display:none;flex-direction:column;overflow:hidden;
+      min-width:400px;min-height:300px;font-family:inherit}
+    #guidePanelV2.active{display:flex;animation:gpSlide .28s ease-out}
+    @keyframes gpSlide{from{transform:translateX(80px);opacity:0}to{transform:translateX(0);opacity:1}}
+    #guidePanelV2.maximized{right:0!important;top:54px!important;
+      width:100vw!important;height:calc(100vh - 54px)!important;
+      border-radius:0;left:0!important}
+    #guidePanelV2 .gp-head{display:flex;align-items:center;gap:10px;padding:10px 14px;
+      background:linear-gradient(180deg,#101d33,#0c1728);
+      border-bottom:1px solid #22334f;cursor:grab;user-select:none;flex:none}
+    #guidePanelV2 .gp-head:active{cursor:grabbing}
+    #guidePanelV2 .gp-title{font-size:13px;font-weight:800;flex:1;color:#fff}
+    #guidePanelV2 .gp-actions{display:flex;gap:6px}
+    #guidePanelV2 .gp-btn{border:0;background:rgba(255,255,255,.06);color:#dbe6f6;
+      width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:14px;
+      display:grid;place-items:center;transition:.15s;font-family:inherit}
+    #guidePanelV2 .gp-btn:hover{background:rgba(255,255,255,.15)}
+    #guidePanelV2 .gp-btn.close:hover{background:#b91c1c}
+    #guidePanelV2 .gp-body{flex:1;min-height:0;background:#0a1424;position:relative}
+    #guidePanelV2 iframe{width:100%;height:100%;border:0;display:block}
+    #guidePanelV2 .gp-resize{position:absolute;right:0;bottom:0;width:16px;height:16px;
+      cursor:nwse-resize;z-index:2;
+      background:linear-gradient(135deg,transparent 45%,#38bdf8 45%,#38bdf8 55%,transparent 55%),
+                 linear-gradient(135deg,transparent 65%,#38bdf8 65%,#38bdf8 72%,transparent 72%);
+      border-bottom-right-radius:14px}
+    #guidePanelV2 .gp-resize:hover{filter:brightness(1.4)}
+    #btnGuide.on{background:linear-gradient(135deg,#166534,#22c55e);border-color:#22c55e;color:#fff}
+  `;
+  document.head.appendChild(css);
+
+  /* ---------- 2. HTML ПАНЕЛИ ---------- */
+  var panel = document.createElement('div');
+  panel.id = 'guidePanelV2';
+  panel.innerHTML = `
+    <div class="gp-head">
+      <span class="gp-title">📖 Гайд по программированию</span>
+      <div class="gp-actions">
+        <button class="gp-btn" data-act="max" title="Развернуть">⛶</button>
+        <button class="gp-btn close" data-act="close" title="Закрыть">✕</button>
+      </div>
+    </div>
+    <div class="gp-body">
+      <iframe id="guideFrameV2" src="about:blank" loading="lazy"></iframe>
+    </div>
+    <div class="gp-resize"></div>
+  `;
+  document.body.appendChild(panel);
+
+  var head   = panel.querySelector('.gp-head');
+  var frame  = panel.querySelector('iframe');
+  var resize = panel.querySelector('.gp-resize');
+
+  /* ---------- 3. КНОПКА В ТОПБАРЕ ---------- */
+  var openBtn = document.getElementById('btnGuide');
+
+  // Если кнопки нет — создаём сами
+  if(!openBtn){
+    openBtn = document.createElement('button');
+    openBtn.className = 'btn';
+    openBtn.id = 'btnGuide';
+    openBtn.textContent = '📖 Гайд';
+    // Вставляем перед кнопкой "Очистить" или в конец топбара
+    var topbar = document.getElementById('topbar');
+    var clearBtn = document.getElementById('btnClear');
+    if(topbar){
+      if(clearBtn) topbar.insertBefore(openBtn, clearBtn);
+      else topbar.appendChild(openBtn);
+    }
+  } else {
+    // Если это была <a href="guide.html"> — превращаем в кнопку, чтобы не открывалась в новой вкладке
+    if(openBtn.tagName === 'A'){
+      var newBtn = document.createElement('button');
+      newBtn.className = openBtn.className;
+      newBtn.id = 'btnGuide';
+      newBtn.textContent = openBtn.textContent || '📖 Гайд';
+      openBtn.parentNode.replaceChild(newBtn, openBtn);
+      openBtn = newBtn;
+    } else if(openBtn.tagName !== 'BUTTON'){
+      // На всякий случай — если это div/span
+      openBtn.style.cursor = 'pointer';
+    }
+  }
+
+  /* ---------- 4. ЛОГИКА ---------- */
+  var loaded = false;
+
+  function show(){
+    if(!loaded){ frame.src = 'guide.html'; loaded = true; }
+    // Восстановить геометрию
+    try{
+      var saved = localStorage.getItem('vvg_guide_geom');
+      if(saved){
+        var p = JSON.parse(saved);
+        if(p.maximized){
+          panel.classList.add('maximized');
+        } else {
+          if(p.w) panel.style.width  = p.w + 'px';
+          if(p.h) panel.style.height = p.h + 'px';
+          if(p.left != null && p.top != null){
+            panel.style.left  = p.left + 'px';
+            panel.style.top   = p.top  + 'px';
+            panel.style.right = 'auto';
+          }
+        }
+      }
+    }catch(_){}
+    panel.classList.add('active');
+    openBtn.classList.add('on');
+  }
+  function hide(){
+    panel.classList.remove('active');
+    openBtn.classList.remove('on');
+  }
+
+  openBtn.addEventListener('click', function(e){
+    e.preventDefault();
+    if(panel.classList.contains('active')) hide(); else show();
+  });
+
+  panel.querySelector('[data-act="close"]').addEventListener('click', hide);
+  panel.querySelector('[data-act="max"]').addEventListener('click', function(){
+    panel.classList.toggle('maximized');
+    if(!panel.classList.contains('maximized')){
+      panel.style.width = ''; panel.style.height = '';
+      panel.style.left = ''; panel.style.top = '';
+      panel.style.right = '20px';
+    } else {
+      panel.style.left = '0'; panel.style.top = '54px'; panel.style.right = 'auto';
+    }
+    saveGeom();
+    setTimeout(function(){ window.dispatchEvent(new Event('resize')); }, 100);
+  });
+
+  /* ---------- 5. DRAG ---------- */
+  var dragging = false, dx = 0, dy = 0;
+  head.addEventListener('pointerdown', function(e){
+    if(e.target.closest('button')) return;
+    if(panel.classList.contains('maximized')) return;
+    var r = panel.getBoundingClientRect();
+    dx = e.clientX - r.left;
+    dy = e.clientY - r.top;
+    dragging = true;
+    try{ head.setPointerCapture(e.pointerId); }catch(_){}
+    e.preventDefault();
+  });
+  head.addEventListener('pointermove', function(e){
+    if(!dragging) return;
+    var nx = e.clientX - dx;
+    var ny = e.clientY - dy;
+    var maxL = window.innerWidth  - 80;
+    var maxT = window.innerHeight - 60;
+    nx = Math.max(-panel.offsetWidth + 100, Math.min(maxL, nx));
+    ny = Math.max(54, Math.min(maxT, ny));
+    panel.style.left  = nx + 'px';
+    panel.style.top   = ny + 'px';
+    panel.style.right = 'auto';
+  });
+  head.addEventListener('pointerup', function(e){
+    if(!dragging) return;
+    dragging = false;
+    try{ head.releasePointerCapture(e.pointerId); }catch(_){}
+    saveGeom();
+  });
+
+  /* ---------- 6. RESIZE ---------- */
+  var resizing = false, rw = 0, rh = 0, rx = 0, ry = 0;
+  resize.addEventListener('pointerdown', function(e){
+    e.stopPropagation();
+    if(panel.classList.contains('maximized')) return;
+    var r = panel.getBoundingClientRect();
+    rw = r.width; rh = r.height; rx = e.clientX; ry = e.clientY;
+    resizing = true;
+    try{ resize.setPointerCapture(e.pointerId); }catch(_){}
+    e.preventDefault();
+  });
+  resize.addEventListener('pointermove', function(e){
+    if(!resizing) return;
+    var nw = Math.max(400, rw + (e.clientX - rx));
+    var nh = Math.max(300, rh + (e.clientY - ry));
+    panel.style.width  = nw + 'px';
+    panel.style.height = nh + 'px';
+  });
+  resize.addEventListener('pointerup', function(e){
+    if(!resizing) return;
+    resizing = false;
+    try{ resize.releasePointerCapture(e.pointerId); }catch(_){}
+    saveGeom();
+    setTimeout(function(){ window.dispatchEvent(new Event('resize')); }, 80);
+  });
+
+  /* ---------- 7. SAVE GEOM ---------- */
+  function saveGeom(){
+    var r = panel.getBoundingClientRect();
+    try{
+      localStorage.setItem('vvg_guide_geom', JSON.stringify({
+        left: r.left, top: r.top, w: r.width, h: r.height,
+        maximized: panel.classList.contains('maximized')
+      }));
+    }catch(_){}
+  }
+
+  /* ---------- 8. ESC ---------- */
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && panel.classList.contains('active')){
+      // Не закрываем если открыт какой-то modal внутри игры
+      if(document.querySelector('.modal.active')) return;
+      hide();
+    }
+  });
+
+  console.log('✅ Guide Panel v2 готова. Кнопка:', openBtn.tagName, openBtn.id);
+})();
+</script>
 </body>
 </html>
