@@ -5006,8 +5006,6 @@ var MP = {
 };
 var mpNetCounter = 0;
 var mpLastSnapshot = new Map();
-var mpNetCounter = 0;
-var mpLastSnapshot = new Map();
 var MP_COLORS = ['#38bdf8','#f472b6','#fbbf24','#34d399','#f87171','#a855f7','#22d3ee','#fb7185'];
 function mpEscape(s){
   return String(s == null ? '' : s)
@@ -5258,6 +5256,27 @@ function mpJoin(code){
       mpRenderUI();
     });
   });
+
+  MP.client.on('message', (topic, payload) => {
+    let msg;
+    try{ msg = JSON.parse(payload.toString()); }catch(_){ return; }
+    mpOnMessage(msg);
+  });
+
+  MP.client.on('error', (e) => {
+    console.error('MQTT error', e);
+    toast('❌ MQTT: ' + (e.message || 'ошибка'));
+  });
+
+  setTimeout(() => {
+    if(MP.active && !MP.isHost && MP.peers.size === 0){
+      toast('⚠ Нет ответа. Проверьте код.');
+    }
+  }, 5000);
+
+  mpRenderUI();
+  toast('🔗 Подключение к ' + code + '…');
+}
 
   MP.client.on('message', (topic, payload) => {
     let msg;
