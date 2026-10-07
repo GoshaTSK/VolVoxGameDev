@@ -5002,7 +5002,7 @@ var MP = {
   lastSyncBroadcast: 0,
   SYNC_INTERVAL: 60,
   client: null,
-  MQTT_URL: 'wss://broker.hivemq.com:8884/mqtt',
+  MQTT_URL: 'wss://broker.emqx.io:8084/mqtt',
 };
 var mpNetCounter = 0;
 var mpLastSnapshot = new Map();
@@ -5141,11 +5141,13 @@ function mpHost(){
 
   const clientId = 'vvg_' + MP.myId + '_' + Math.random().toString(36).slice(2, 6);
   try{
-    MP.client = mqtt.connect(MP.MQTT_URL, {
+  MP.client = mqtt.connect(MP.MQTT_URL, {
       clientId,
       clean: true,
-      connectTimeout: 8000,
-      reconnectPeriod: 3000,
+      keepalive: 30,
+      connectTimeout: 10000,
+      reconnectPeriod: 2000,
+      resubscribe: true,
     });
   }catch(e){
     console.error(e);
@@ -5196,8 +5198,10 @@ function mpHost(){
     MP.client = mqtt.connect(MP.MQTT_URL, {
       clientId,
       clean: true,
-      connectTimeout: 8000,
-      reconnectPeriod: 3000,
+      keepalive: 30,
+      connectTimeout: 10000,
+      reconnectPeriod: 2000,
+      resubscribe: true,
     });
   }catch(e){
     console.error(e);
