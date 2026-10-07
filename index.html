@@ -4996,13 +4996,13 @@ var MP = {
   active: false, isHost: false, roomCode: null,
   myId: 'p_' + Math.random().toString(36).slice(2, 9),
   myName: 'Игрок', channel: null, peers: new Map(),
-  lastBroadcast: 0, BROADCAST_INTERVAL: 0.05,
+  lastBroadcast: 0, BROADCAST_INTERVAL: 0.033, lastSig: '',
   pvp: false,
   applyingRemote: false,
   lastSyncBroadcast: 0,
   SYNC_INTERVAL: 60,
   client: null,
-  MQTT_URL: 'wss://broker.emqx.io:8084/mqtt',
+  MQTT_URL: 'wss://broker.hivemq.com:8884/mqtt',
 };
 var mpNetCounter = 0;
 var mpLastSnapshot = new Map();
@@ -5494,11 +5494,27 @@ function mpUpdateLocalBroadcast(dt){
   MP.lastBroadcast = 0;
   const st = mpGetLocalState();
   if(!st) return;
+  // Не отправляем, если ничего не изменилось
+  const sig = st.x + '|' + st.y + '|' + st.z + '|' + st.ry + '|' + st.visible + '|' + st.hp;
+  if(sig === MP.lastSig) return;
+  MP.lastSig = sig;
   mpBroadcast({ t:'state', ...st, name: MP.myName });
 }
 function mpUpdatePeerState(msg){
   const p = MP.peers.get(msg.from) || mpEnsurePeer(msg.from, msg.name, false);
-  p.lastSeen = performance.now();
+  const now = performance.now();
+  // Считаем скорость на основе предыдущей позиции
+  if(p.state && p.lastSeen){
+    const dtSec = (now - p.lastSeen) / 1000;
+    if(dtSec > 0.001 && dtSec < 1){
+      p.vel = {
+        x: (msg.x - p.state.x) / dtSec,
+        y: (msg.y - p.state.y) / dtSec,
+        z: (msg.z - p.state.z) / dtSec,
+      };
+    }
+  }
+  p.lastSeen = now;
   if(msg.name && msg.name !== p.name) p.name = msg.name;
   const prevDim = p.state && p.state.dim;
   p.state = { x: msg.x, y: msg.y, z: msg.z, ry: msg.ry,
@@ -5512,13 +5528,21 @@ function mpUpdatePeerState(msg){
 function mpInterpolatePeers(dt){
   const now = performance.now();
   for(const [id, peer] of MP.peers){
-    if(now - peer.lastSeen > 5000){ mpRemovePeer(id); continue; }
+    const elapsed = (now - peer.lastSeen) / 1000;
+    if(elapsed > 5){ mpRemovePeer(id); continue; }
     if(!peer.ghost || !peer.state) continue;
     const g = peer.ghost, t = peer.state;
-    const k = Math.min(1, dt * 12);
-    g.position.x += (t.x - g.position.x) * k;
-    g.position.y += (t.y - g.position.y) * k;
-    g.position.z += (t.z - g.position.z) * k;
+    // Экстраполяция: если давно не было пакета, предсказываем позицию по скорости
+    let tx = t.x, ty = t.y, tz = t.z;
+    if(peer.vel && elapsed > 0 && elapsed < 0.3){
+      tx += peer.vel.x * elapsed * 0.5;
+      ty += peer.vel.y * elapsed * 0.5;
+      tz += peer.vel.z * elapsed * 0.5;
+    }
+    const k = Math.min(1, dt * 22);
+    g.position.x += (tx - g.position.x) * k;
+    g.position.y += (ty - g.position.y) * k;
+    g.position.z += (tz - g.position.z) * k;
     let dRy = t.ry - g.rotation.y;
     while(dRy > Math.PI) dRy -= Math.PI * 2;
     while(dRy < -Math.PI) dRy += Math.PI * 2;
