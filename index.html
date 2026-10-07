@@ -1877,7 +1877,6 @@ function addObject(type, opts = {}){
   if(!obj.userData.netId && MP.active && !MP.applyingRemote && !isPlayer(obj)){
     obj.userData.netId = MP.myId + '_' + (++mpNetCounter);
   }
-  }
   if(MP.active && !MP.applyingRemote && obj.userData.netId){
     mpBroadcast({ t:'obj_add', netId: obj.userData.netId, data: serializeObject(obj) });
     mpLastSnapshot.set(obj.userData.netId, mpHashObj(obj));
