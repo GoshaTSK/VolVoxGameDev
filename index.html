@@ -5001,8 +5001,9 @@ var MP = {
   applyingRemote: false,
   lastSyncBroadcast: 0,
   SYNC_INTERVAL: 60,
-  client: null,
-  MQTT_URL: 'wss://broker.emqx.io:8084/mqtt',
+    client: null,
+  helloTimer: null,
+  MQTT_URL: 'wss://test.mosquitto.org:8081/mqtt',
 };
 var mpNetCounter = 0;
 var mpLastSnapshot = new Map();
@@ -5146,7 +5147,7 @@ function mpHost(){
       clean: true,
       keepalive: 30,
       connectTimeout: 10000,
-      reconnectPeriod: 2000,
+      reconnectPeriod: 5000,
       resubscribe: true,
     });
   }catch(e){
@@ -5200,7 +5201,7 @@ function mpHost(){
       clean: true,
       keepalive: 30,
       connectTimeout: 10000,
-      reconnectPeriod: 2000,
+      reconnectPeriod: 5000,
       resubscribe: true,
     });
   }catch(e){
@@ -5212,13 +5213,22 @@ function mpHost(){
 
   const topic = 'vvg/room/' + MP.roomCode;
 
-  MP.client.on('connect', () => {
+    MP.client.on('connect', () => {
     console.log('MQTT подключён (гость):', clientId);
     MP.client.subscribe(topic, { qos: 0 }, (err) => {
       if(err){ toast('❌ Не удалось подписаться'); return; }
-      mpBroadcast({ t:'hello', id: MP.myId, name: MP.myName });
       toast('🔗 Подключено к ' + code);
       mpRenderUI();
+      // Спамим hello, пока не получим ответ от хоста (макс 30 сек)
+      let tries = 0;
+      const sendHello = () => {
+        if(!MP.active || MP.isHost) return;
+        if(MP.peers.size > 0) return; // уже видим кого-то — стоп
+        mpBroadcast({ t:'hello', id: MP.myId, name: MP.myName });
+        tries++;
+        if(tries < 15) MP.helloTimer = setTimeout(sendHello, 2000);
+      };
+      sendHello();
     });
   });
 
@@ -5247,6 +5257,7 @@ function mpLeave(showMsg){
   try{ mpBroadcast({ t:'bye', id: MP.myId }); }catch(_){}
   for(const [, peer] of MP.peers) mpDestroyGhost(peer);
   MP.peers.clear();
+ if(MP.helloTimer){ clearTimeout(MP.helloTimer); MP.helloTimer = null; }
   try{ MP.client && MP.client.end(true); }catch(_){}
   MP.client = null;
   MP.active = false; MP.isHost = false; MP.roomCode = null;
@@ -5325,12 +5336,15 @@ $('mpModal').addEventListener('click', e => { if(e.target === $('mpModal')) mpCl
   if(!msg || msg.from === MP.myId) return;
   let needsUi = false;
   switch(msg.t){
-    case 'hello':
-      mpEnsurePeer(msg.id, msg.name, false);
-      mpBroadcast({ t:'hi', id: MP.myId, name: MP.myName, isHost: MP.isHost });
-      if(MP.isHost){
-        try{ mpBroadcast({ t:'project', target: msg.id, data: mpSerializeProject() }); }
-        catch(e){ console.warn('mp serialize', e); }
+        case 'hello':
+      {
+        const wasNew = !MP.peers.has(msg.id);
+        mpEnsurePeer(msg.id, msg.name, false);
+        mpBroadcast({ t:'hi', id: MP.myId, name: MP.myName, isHost: MP.isHost });
+        if(MP.isHost && wasNew){
+          try{ mpBroadcast({ t:'project', target: msg.id, data: mpSerializeProject() }); }
+          catch(e){ console.warn('mp serialize', e); }
+        }
       }
       needsUi = true;
       break;
@@ -5533,7 +5547,7 @@ function mpInterpolatePeers(dt){
   const now = performance.now();
   for(const [id, peer] of MP.peers){
     const elapsed = (now - peer.lastSeen) / 1000;
-    if(elapsed > 5){ mpRemovePeer(id); continue; }
+    if(elapsed > 15){ mpRemovePeer(id); continue; }
     if(!peer.ghost || !peer.state) continue;
     const g = peer.ghost, t = peer.state;
     // Экстраполяция: если давно не было пакета, предсказываем позицию по скорости
