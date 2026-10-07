@@ -1874,8 +1874,9 @@ function addObject(type, opts = {}){
   getActiveGroup().add(obj);
   objects.push(obj);
 
-  if(!obj.userData.netId && MP.active && !MP.applyingRemote){
+  if(!obj.userData.netId && MP.active && !MP.applyingRemote && !isPlayer(obj)){
     obj.userData.netId = MP.myId + '_' + (++mpNetCounter);
+  }
   }
   if(MP.active && !MP.applyingRemote && obj.userData.netId){
     mpBroadcast({ t:'obj_add', netId: obj.userData.netId, data: serializeObject(obj) });
@@ -5323,6 +5324,7 @@ function mpHashObj(o){
 function mpAssignNetIdsToScene(){
   for(const dim of ['3d','2d']){
     for(const o of objectsByDim[dim]){
+      if(isPlayer(o)) continue;
       if(!o.userData.netId){
         o.userData.netId = MP.myId + '_' + (++mpNetCounter);
       }
@@ -5353,6 +5355,7 @@ function mpScanAndSyncScene(){
   MP.lastSyncBroadcast = now;
   const batch = [];
   for(const o of objects){
+    if(isPlayer(o)) continue;
     if(!o.userData.netId) continue;
     const h = mpHashObj(o);
     const prev = mpLastSnapshot.get(o.userData.netId);
@@ -5406,7 +5409,8 @@ function mpOnMessage(msg){
     case 'shoot':
       mpRemoteShoot(msg);
       break;
-    case 'obj_add':
+     case 'obj_add':
+      if(msg.data && msg.data.type === 'player') break;
       MP.applyingRemote = true;
       try{
         if(!objects.find(o => o.userData.netId === msg.netId)){
