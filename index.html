@@ -5007,12 +5007,9 @@ var MP = {
   seenMsgs: new Set(),
   helloTimer: null,
   MQTT_URLS: [
-    'wss://broker.emqx.io:8084/mqtt',
-    'wss://test.mosquitto.org:8081/mqtt',
     'wss://broker.hivemq.com:8884/mqtt',
-    'wss://mqtt.eclipseprojects.io:443/mqtt',
   ],
-  MQTT_URL: 'wss://broker.emqx.io:8084/mqtt',
+  MQTT_URL: 'wss://broker.hivemq.com:8884/mqtt',
   mqttTryIdx: 0,
 };
 var mpNetCounter = 0;
@@ -5226,71 +5223,48 @@ function mpLeave(showMsg){
 }
 
 function mpConnectMQTT(onReady){
-  const urls = MP.MQTT_URLS || [MP.MQTT_URL];
-  const tryConnect = (idx) => {
-    if(idx >= urls.length){
-      toast('❌ Все брокеры недоступны');
-      MP.active = false;
-      mpRenderUI();
-      return;
-    }
-    const url = urls[idx];
-    console.log('MQTT пытаюсь подключиться:', url);
-    const clientId = 'vvg_' + MP.myId + '_' + Math.random().toString(36).slice(2, 6);
-    let client;
-    try{
-      client = mqtt.connect(url, {
-        clientId,
-        clean: true,
-        keepalive: 15,
-        connectTimeout: 8000,
-        reconnectPeriod: 0,
-        resubscribe: false,
-      });
-    }catch(e){
-      console.warn('mqtt.connect threw', e);
-      tryConnect(idx + 1);
-      return;
-    }
-    let connected = false;
-    const failTimer = setTimeout(() => {
-      if(!connected){
-        console.warn('Таймаут брокера:', url);
-        try{ client.end(true); }catch(_){}
-        tryConnect(idx + 1);
-      }
-    }, 9000);
-    client.on('connect', () => {
-      connected = true;
-      clearTimeout(failTimer);
-      console.log('✅ MQTT подключён к', url);
-      MP.client = client;
-      MP.mqttTryIdx = idx;
-      client.on('message', (topic, payload) => {
-        let msg;
-        try{ msg = JSON.parse(payload.toString()); }catch(_){ return; }
-        mpOnMessage(msg);
-      });
+  const url = MP.MQTT_URL;
+  const clientId = 'vvg_' + MP.myId + '_' + Math.random().toString(36).slice(2, 8);
+  let client;
+  try{
+    client = mqtt.connect(url, {
+      clientId,
+      clean: true,
+      keepalive: 60,
+      connectTimeout: 15000,
+      reconnectPeriod: 3000,
+      resubscribe: true,
+      protocolVersion: 4,
+    });
+  }catch(e){
+    console.error('mqtt.connect threw', e);
+    return;
+  }
+  let subscribed = false;
+  client.on('connect', () => {
+    console.log('✅ MQTT подключён к', url);
+    MP.client = client;
+    client.on('message', (topic, payload) => {
+      let msg;
+      try{ msg = JSON.parse(payload.toString()); }catch(_){ return; }
+      mpOnMessage(msg);
+    });
+    if(!subscribed){
+      subscribed = true;
       onReady(client);
-    });
-    client.on('error', (e) => {
-      console.warn('MQTT error на', url, e.message);
-      if(!connected){
-        clearTimeout(failTimer);
-        try{ client.end(true); }catch(_){}
-        tryConnect(idx + 1);
-      }
-    });
-    client.on('close', () => {
-      if(connected){
-        console.warn('MQTT разорвано, реконнект...');
-        MP.client = null;
-        try{ MP.client.end(true); }catch(_){}
-        setTimeout(() => mpConnectMQTT(onReady), 500);
-      }
-    });
-  };
-  tryConnect(0);
+    } else {
+      client.subscribe('vvg/room/' + MP.roomCode, { qos: 0 }, () => {});
+    }
+  });
+  client.on('error', (e) => {
+    console.warn('MQTT error:', e.message);
+  });
+  client.on('offline', () => {
+    console.warn('MQTT offline');
+  });
+  client.on('close', () => {
+    console.warn('MQTT close — mqtt.js сам переподключится');
+  });
 }
 
 function mpBroadcast(msg){
