@@ -5184,13 +5184,12 @@ function mpJoin(code){
       if(err){ toast('❌ Не удалось подписаться'); return; }
       toast('🔗 Подключено к ' + code);
       mpRenderUI();
-      let tries = 0;
+           if(MP.helloTimer){ clearTimeout(MP.helloTimer); MP.helloTimer = null; }
       const sendHello = () => {
         if(!MP.active || MP.isHost) return;
-        if(MP.peers.size > 0) return;
+        if(MP.peers.size > 0){ MP.helloTimer = null; return; }
         mpBroadcast({ t:'hello', id: MP.myId, name: MP.myName });
-        tries++;
-        if(tries < 15) MP.helloTimer = setTimeout(sendHello, 2000);
+        MP.helloTimer = setTimeout(sendHello, 2500);
       };
       sendHello();
     });
@@ -5243,7 +5242,7 @@ function mpConnectMQTT(onReady){
       client = mqtt.connect(url, {
         clientId,
         clean: true,
-        keepalive: 30,
+        keepalive: 15,
         connectTimeout: 8000,
         reconnectPeriod: 0,
         resubscribe: false,
@@ -5286,7 +5285,8 @@ function mpConnectMQTT(onReady){
       if(connected){
         console.warn('MQTT разорвано, реконнект...');
         MP.client = null;
-        setTimeout(() => mpConnectMQTT(onReady), 2000);
+        try{ MP.client.end(true); }catch(_){}
+        setTimeout(() => mpConnectMQTT(onReady), 500);
       }
     });
   };
@@ -5397,6 +5397,7 @@ function mpOnMessage(msg){
       break;
     case 'hi':
       mpEnsurePeer(msg.id, msg.name, msg.isHost);
+      if(MP.helloTimer){ clearTimeout(MP.helloTimer); MP.helloTimer = null; }
       needsUi = true;
       break;
     case 'project':
