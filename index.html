@@ -4992,6 +4992,7 @@ window.addEventListener('storage', (e) => {
 });
 setTimeout(checkPendingProgram, 500);
   /* ============ MULTIPLAYER — Часть 1 ============ */
+var mpMsgCounter = 0;
 var MP = {
   active: false, isHost: false, roomCode: null,
   myId: 'p_' + Math.random().toString(36).slice(2, 9),
@@ -5003,6 +5004,7 @@ var MP = {
   SYNC_INTERVAL: 60,
   client: null,
   bc: null,
+  seenMsgs: new Set(),
   helloTimer: null,
   MQTT_URL: 'wss://broker.emqx.io:8084/mqtt',
 };
@@ -5275,7 +5277,8 @@ function mpLeave(showMsg){
   mpRenderUI();
 }
 function mpBroadcast(msg){
-  const payload = { ...msg, from: MP.myId, ts: Date.now() };
+  const mid = MP.myId + '_' + (++mpMsgCounter);
+  const payload = { ...msg, from: MP.myId, ts: Date.now(), mid };
   // Канал 1: BroadcastChannel — для вкладок одного браузера (мгновенно)
   if(MP.bc){
     try{ MP.bc.postMessage(payload); }catch(_){}
@@ -5350,6 +5353,14 @@ $('btnMpClose').onclick = mpCloseModal;
 $('mpModal').addEventListener('click', e => { if(e.target === $('mpModal')) mpCloseModal(); });
  function mpOnMessage(msg){
   if(!msg || msg.from === MP.myId) return;
+     if(msg.mid){
+    if(MP.seenMsgs.has(msg.mid)) return;
+    MP.seenMsgs.add(msg.mid);
+    if(MP.seenMsgs.size > 500){
+      const it = MP.seenMsgs.values();
+      for(let i = 0; i < 250; i++) MP.seenMsgs.delete(it.next().value);
+    }
+  }
   let needsUi = false;
   switch(msg.t){
         case 'hello':
@@ -5568,10 +5579,11 @@ function mpInterpolatePeers(dt){
     const g = peer.ghost, t = peer.state;
     // Экстраполяция: если давно не было пакета, предсказываем позицию по скорости
     let tx = t.x, ty = t.y, tz = t.z;
-    if(peer.vel && elapsed > 0 && elapsed < 0.3){
-      tx += peer.vel.x * elapsed * 0.5;
-      ty += peer.vel.y * elapsed * 0.5;
-      tz += peer.vel.z * elapsed * 0.5;
+    if(peer.vel && elapsed > 0 && elapsed < 0.15){
+    const f = Math.min(elapsed * 3, 0.3);
+      tx += peer.vel.x * f;
+      ty += peer.vel.y * f;
+      tz += peer.vel.z * f;
     }
     const k = Math.min(1, dt * 22);
     g.position.x += (tx - g.position.x) * k;
