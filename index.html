@@ -4991,7 +4991,7 @@ window.addEventListener('storage', (e) => {
   }catch(_){}
 });
 setTimeout(checkPendingProgram, 500);
-  /* ============ MULTIPLAYER — Часть 1 ============ */
+/* ============ MULTIPLAYER — Часть 1 ============ */
 var mpMsgCounter = 0;
 var MP = {
   active: false, isHost: false, roomCode: null,
@@ -5034,7 +5034,7 @@ function mpGenCode(){
   for(let i = 0; i < 5; i++) s += chars[Math.floor(Math.random() * chars.length)];
   return s;
 }
-  function mpRenderUI(){
+function mpRenderUI(){
   const modal = $('mpModal');
   if(!modal) return;
   if(!modal.classList.contains('active') && MP.active) return;
@@ -5137,6 +5137,7 @@ function mpGenCode(){
 }
 function mpOpenModal(){ $('mpModal').classList.add('active'); mpRenderUI(); }
 function mpCloseModal(){ $('mpModal').classList.remove('active'); }
+
 function mpHost(){
   if(MP.active) mpLeave(false);
   MP.roomCode = mpGenCode();
@@ -5150,7 +5151,35 @@ function mpHost(){
     return;
   }
 
-    mpConnectMQTT(() => {
+  mpConnectMQTT(() => {
+    MP.client.subscribe('vvg/room/' + MP.roomCode, { qos: 0 }, (err) => {
+      if(err){ toast('❌ Не удалось подписаться'); return; }
+      mpRenderUI();
+      toast('📡 Комната ' + MP.roomCode + ' создана');
+    });
+  });
+
+  try{
+    MP.bc = new BroadcastChannel('vvg-mp-' + MP.roomCode);
+    MP.bc.onmessage = (ev) => mpOnMessage(ev.data);
+  }catch(_){}
+  mpRenderUI();
+}
+
+function mpJoin(code){
+  if(MP.active) mpLeave(false);
+  MP.roomCode = code;
+  MP.isHost = false;
+  MP.active = true;
+  mpAssignNetIdsToScene();
+
+  if(typeof mqtt === 'undefined'){
+    toast('❌ MQTT-клиент не загрузился');
+    MP.active = false;
+    return;
+  }
+
+  mpConnectMQTT(() => {
     MP.client.subscribe('vvg/room/' + MP.roomCode, { qos: 0 }, (err) => {
       if(err){ toast('❌ Не удалось подписаться'); return; }
       toast('🔗 Подключено к ' + code);
@@ -5171,36 +5200,8 @@ function mpHost(){
     MP.bc = new BroadcastChannel('vvg-mp-' + MP.roomCode);
     MP.bc.onmessage = (ev) => mpOnMessage(ev.data);
   }catch(_){}
-  const topic = 'vvg/room/' + MP.roomCode;
-  mpRenderUI();
-}
- function mpJoin(code){
-  if(MP.active) mpLeave(false);
-  MP.roomCode = code;
-  MP.isHost = false;
-  MP.active = true;
-  mpAssignNetIdsToScene();
 
-  if(typeof mqtt === 'undefined'){
-    toast('❌ MQTT-клиент не загрузился');
-    MP.active = false;
-    return;
-  }
-
-    mpConnectMQTT(() => {
-    MP.client.subscribe('vvg/room/' + MP.roomCode, { qos: 0 }, (err) => {
-      if(err){ toast('❌ Не удалось подписаться'); return; }
-      mpRenderUI();
-      toast('📡 Комната ' + MP.roomCode + ' создана');
-    });
-  });
- try{
-    MP.bc = new BroadcastChannel('vvg-mp-' + MP.roomCode);
-    MP.bc.onmessage = (ev) => mpOnMessage(ev.data);
-  }catch(_){}
-  const topic = 'vvg/room/' + MP.roomCode;
-
-   setTimeout(() => {
+  setTimeout(() => {
     if(MP.active && !MP.isHost && MP.peers.size === 0){
       toast('⚠ Нет ответа. Проверьте код.');
     }
@@ -5209,12 +5210,13 @@ function mpHost(){
   mpRenderUI();
   toast('🔗 Подключение к ' + code + '…');
 }
+
 function mpLeave(showMsg){
   if(!MP.active) return;
   try{ mpBroadcast({ t:'bye', id: MP.myId }); }catch(_){}
   for(const [, peer] of MP.peers) mpDestroyGhost(peer);
   MP.peers.clear();
- if(MP.helloTimer){ clearTimeout(MP.helloTimer); MP.helloTimer = null; }
+  if(MP.helloTimer){ clearTimeout(MP.helloTimer); MP.helloTimer = null; }
   try{ MP.bc && MP.bc.close(); }catch(_){}
   MP.bc = null;
   try{ MP.client && MP.client.end(true); }catch(_){}
@@ -5223,7 +5225,8 @@ function mpLeave(showMsg){
   if(showMsg) toast('🚪 Вы покинули комнату');
   mpRenderUI();
 }
-  function mpConnectMQTT(onReady){
+
+function mpConnectMQTT(onReady){
   const urls = MP.MQTT_URLS || [MP.MQTT_URL];
   const tryConnect = (idx) => {
     if(idx >= urls.length){
@@ -5242,7 +5245,7 @@ function mpLeave(showMsg){
         clean: true,
         keepalive: 30,
         connectTimeout: 8000,
-        reconnectPeriod: 0,      // отключаем авто-реконнект — сами решаем
+        reconnectPeriod: 0,
         resubscribe: false,
       });
     }catch(e){
@@ -5262,7 +5265,7 @@ function mpLeave(showMsg){
       connected = true;
       clearTimeout(failTimer);
       console.log('✅ MQTT подключён к', url);
-            MP.client = client;
+      MP.client = client;
       MP.mqttTryIdx = idx;
       client.on('message', (topic, payload) => {
         let msg;
@@ -5281,7 +5284,6 @@ function mpLeave(showMsg){
     });
     client.on('close', () => {
       if(connected){
-        // уже были подключены — пробуем переподключиться к любому брокеру
         console.warn('MQTT разорвано, реконнект...');
         MP.client = null;
         setTimeout(() => mpConnectMQTT(onReady), 2000);
@@ -5290,21 +5292,21 @@ function mpLeave(showMsg){
   };
   tryConnect(0);
 }
+
 function mpBroadcast(msg){
   const mid = MP.myId + '_' + (++mpMsgCounter);
   const payload = { ...msg, from: MP.myId, ts: Date.now(), mid };
-  // Канал 1: BroadcastChannel — для вкладок одного браузера (мгновенно)
   if(MP.bc){
     try{ MP.bc.postMessage(payload); }catch(_){}
   }
-  // Канал 2: MQTT — для удалённых игроков
   if(MP.client && MP.roomCode){
     try{
       MP.client.publish('vvg/room/' + MP.roomCode, JSON.stringify(payload), { qos: 0 });
     }catch(e){ console.warn('mqtt publish', e); }
   }
 }
-  function mpHashObj(o){
+
+function mpHashObj(o){
   return [
     o.position.x.toFixed(2), o.position.y.toFixed(2), o.position.z.toFixed(2),
     o.rotation.x.toFixed(2), o.rotation.y.toFixed(2), o.rotation.z.toFixed(2),
@@ -5362,12 +5364,14 @@ function mpScanAndSyncScene(){
   }
   if(batch.length) mpBroadcast({ t:'obj_batch', items: batch });
 }
+
 $('btnMultiplayer').onclick = mpOpenModal;
 $('btnMpClose').onclick = mpCloseModal;
 $('mpModal').addEventListener('click', e => { if(e.target === $('mpModal')) mpCloseModal(); });
- function mpOnMessage(msg){
+
+function mpOnMessage(msg){
   if(!msg || msg.from === MP.myId) return;
-     if(msg.mid){
+  if(msg.mid){
     if(MP.seenMsgs.has(msg.mid)) return;
     MP.seenMsgs.add(msg.mid);
     if(MP.seenMsgs.size > 500){
@@ -5377,7 +5381,7 @@ $('mpModal').addEventListener('click', e => { if(e.target === $('mpModal')) mpCl
   }
   let needsUi = false;
   switch(msg.t){
-        case 'hello':
+    case 'hello':
       {
         const wasNew = !MP.peers.has(msg.id);
         mpEnsurePeer(msg.id, msg.name, false);
@@ -5553,7 +5557,6 @@ function mpUpdateLocalBroadcast(dt){
   MP.lastBroadcast = 0;
   const st = mpGetLocalState();
   if(!st) return;
-  // Не отправляем, если ничего не изменилось
   const sig = st.x + '|' + st.y + '|' + st.z + '|' + st.ry + '|' + st.visible + '|' + st.hp;
   if(sig === MP.lastSig) return;
   MP.lastSig = sig;
@@ -5562,7 +5565,6 @@ function mpUpdateLocalBroadcast(dt){
 function mpUpdatePeerState(msg){
   const p = MP.peers.get(msg.from) || mpEnsurePeer(msg.from, msg.name, false);
   const now = performance.now();
-  // Считаем скорость на основе предыдущей позиции
   if(p.state && p.lastSeen){
     const dtSec = (now - p.lastSeen) / 1000;
     if(dtSec > 0.001 && dtSec < 1){
@@ -5591,10 +5593,9 @@ function mpInterpolatePeers(dt){
     if(elapsed > 15){ mpRemovePeer(id); continue; }
     if(!peer.ghost || !peer.state) continue;
     const g = peer.ghost, t = peer.state;
-    // Экстраполяция: если давно не было пакета, предсказываем позицию по скорости
     let tx = t.x, ty = t.y, tz = t.z;
     if(peer.vel && elapsed > 0 && elapsed < 0.15){
-    const f = Math.min(elapsed * 3, 0.3);
+      const f = Math.min(elapsed * 3, 0.3);
       tx += peer.vel.x * f;
       ty += peer.vel.y * f;
       tz += peer.vel.z * f;
@@ -5610,7 +5611,7 @@ function mpInterpolatePeers(dt){
     g.visible = (t.visible !== false) && (t.dim === dimension) && mode === 'play';
   }
 }
-  function mpBroadcastShoot(dir){
+function mpBroadcastShoot(dir){
   if(!MP.active) return;
   const p = objects.find(isPlayer);
   if(!p || !dir) return;
@@ -5655,8 +5656,6 @@ function mpApplyProject(data){
 window.addEventListener('beforeunload', () => {
   if(MP.active) mpBroadcast({ t:'bye', id: MP.myId });
 });
-</script>
-  <script>
 /* ============================================================
    GUIDE PANEL v2 — самодостаточная версия
    Не требует CSS, HTML, доп. обработчиков. Просто работает.
