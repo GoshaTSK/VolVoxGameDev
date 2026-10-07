@@ -5578,6 +5578,13 @@ function mpUpdatePeerState(msg){
       };
     }
   }
+  // Буфер позиций с временными метками
+  if(!p.buffer) p.buffer = [];
+  p.buffer.push({ t: now, x: msg.x, y: msg.y, z: msg.z, ry: msg.ry });
+  while(p.buffer.length > 1 && now - p.buffer[0].t > 1000) p.buffer.shift();
+ if(!p.buffer) p.buffer = [];
+  p.buffer.push({ t: now, x: msg.x, y: msg.y, z: msg.z, ry: msg.ry });
+  while(p.buffer.length > 1 && now - p.buffer[0].t > 1000) p.buffer.shift();
   p.lastSeen = now;
   if(msg.name && msg.name !== p.name) p.name = msg.name;
   const prevDim = p.state && p.state.dim;
@@ -5589,6 +5596,7 @@ function mpUpdatePeerState(msg){
   }
   if(p.ghost) p.ghost.visible = (msg.visible !== false) && (msg.dim === dimension);
 }
+var MP_INTERP_DELAY = 100;
 function mpInterpolatePeers(dt){
   const now = performance.now();
   for(const [id, peer] of MP.peers){
@@ -5596,21 +5604,49 @@ function mpInterpolatePeers(dt){
     if(elapsed > 15){ mpRemovePeer(id); continue; }
     if(!peer.ghost || !peer.state) continue;
     const g = peer.ghost, t = peer.state;
-    let tx = t.x, ty = t.y, tz = t.z;
-    if(peer.vel && elapsed > 0 && elapsed < 0.15){
-      const f = Math.min(elapsed * 3, 0.3);
-      tx += peer.vel.x * f;
-      ty += peer.vel.y * f;
-      tz += peer.vel.z * f;
+    const targetTime = now - MP_INTERP_DELAY;
+    let px = t.x, py = t.y, pz = t.z, pry = t.ry;
+    const buf = peer.buffer;
+    if(buf && buf.length >= 2){
+      let i0 = -1, i1 = -1;
+      for(let i = 0; i < buf.length - 1; i++){
+        if(buf[i].t <= targetTime && buf[i+1].t >= targetTime){ i0 = i; i1 = i+1; break; }
+      }
+      if(i0 === -1){
+        if(targetTime < buf[0].t){
+          px = buf[0].x; py = buf[0].y; pz = buf[0].z; pry = buf[0].ry;
+        } else {
+          const last = buf[buf.length-1];
+          px = last.x; py = last.y; pz = last.z; pry = last.ry;
+        }
+      } else {
+        const f = (targetTime - buf[i0].t) / (buf[i1].t - buf[i0].t);
+        px = buf[i0].x + (buf[i1].x - buf[i0].x) * f;
+        py = buf[i0].y + (buf[i1].y - buf[i0].y) * f;
+        pz = buf[i0].z + (buf[i1].z - buf[i0].z) * f;
+        pry = buf[i0].ry + (buf[i1].ry - buf[i0].ry) * f;
+      }
     }
-    const k = Math.min(1, dt * 22);
-    g.position.x += (tx - g.position.x) * k;
-    g.position.y += (ty - g.position.y) * k;
-    g.position.z += (tz - g.position.z) * k;
-    let dRy = t.ry - g.rotation.y;
+    const k = Math.min(1, dt * 25);
+    g.position.x += (px - g.position.x) * k;
+    g.position.y += (py - g.position.y) * k;
+    g.position.z += (pz - g.position.z) * k;
+    let dRy = pry - g.rotation.y;
     while(dRy > Math.PI) dRy -= Math.PI * 2;
     while(dRy < -Math.PI) dRy += Math.PI * 2;
     g.rotation.y += dRy * k;
+    const me = objects.find(isPlayer);
+    if(me && g.visible){
+      const dx = g.position.x - me.position.x;
+      const dz = dimension === '2d' ? 0 : g.position.z - me.position.z;
+      const dist = Math.hypot(dx, dz);
+      const minDist = 0.9;
+      if(dist < minDist && dist > 0.001){
+        const push = minDist - dist;
+        g.position.x += (dx / dist) * push;
+        if(dimension === '3d') g.position.z += (dz / dist) * push;
+      }
+    }
     g.visible = (t.visible !== false) && (t.dim === dimension) && mode === 'play';
   }
 }
