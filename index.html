@@ -5001,9 +5001,10 @@ var MP = {
   applyingRemote: false,
   lastSyncBroadcast: 0,
   SYNC_INTERVAL: 60,
-    client: null,
+  client: null,
+  bc: null,
   helloTimer: null,
-  MQTT_URL: 'wss://test.mosquitto.org:8081/mqtt',
+  MQTT_URL: 'wss://broker.emqx.io:8084/mqtt',
 };
 var mpNetCounter = 0;
 var mpLastSnapshot = new Map();
@@ -5157,6 +5158,10 @@ function mpHost(){
     return;
   }
 
+  try{
+    MP.bc = new BroadcastChannel('vvg-mp-' + MP.roomCode);
+    MP.bc.onmessage = (ev) => mpOnMessage(ev.data);
+  }catch(_){}
   const topic = 'vvg/room/' + MP.roomCode;
 
   MP.client.on('connect', () => {
@@ -5210,7 +5215,10 @@ function mpHost(){
     MP.active = false;
     return;
   }
-
+ try{
+    MP.bc = new BroadcastChannel('vvg-mp-' + MP.roomCode);
+    MP.bc.onmessage = (ev) => mpOnMessage(ev.data);
+  }catch(_){}
   const topic = 'vvg/room/' + MP.roomCode;
 
     MP.client.on('connect', () => {
@@ -5258,6 +5266,8 @@ function mpLeave(showMsg){
   for(const [, peer] of MP.peers) mpDestroyGhost(peer);
   MP.peers.clear();
  if(MP.helloTimer){ clearTimeout(MP.helloTimer); MP.helloTimer = null; }
+  try{ MP.bc && MP.bc.close(); }catch(_){}
+  MP.bc = null;
   try{ MP.client && MP.client.end(true); }catch(_){}
   MP.client = null;
   MP.active = false; MP.isHost = false; MP.roomCode = null;
@@ -5265,11 +5275,17 @@ function mpLeave(showMsg){
   mpRenderUI();
 }
 function mpBroadcast(msg){
-  if(!MP.client || !MP.roomCode) return;
-  try{
-    const payload = JSON.stringify({ ...msg, from: MP.myId, ts: Date.now() });
-    MP.client.publish('vvg/room/' + MP.roomCode, payload, { qos: 0 });
-  }catch(e){ console.warn('mqtt publish', e); }
+  const payload = { ...msg, from: MP.myId, ts: Date.now() };
+  // Канал 1: BroadcastChannel — для вкладок одного браузера (мгновенно)
+  if(MP.bc){
+    try{ MP.bc.postMessage(payload); }catch(_){}
+  }
+  // Канал 2: MQTT — для удалённых игроков
+  if(MP.client && MP.roomCode){
+    try{
+      MP.client.publish('vvg/room/' + MP.roomCode, JSON.stringify(payload), { qos: 0 });
+    }catch(e){ console.warn('mqtt publish', e); }
+  }
 }
   function mpHashObj(o){
   return [
