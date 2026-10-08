@@ -5221,7 +5221,6 @@ function mpLeave(showMsg){
   if(showMsg) toast('🚪 Вы покинули комнату');
   mpRenderUI();
 }
-
 function mpConnectMQTT(onReady){
   const url = MP.MQTT_URL;
   const clientId = 'vvg_' + MP.myId + '_' + Math.random().toString(36).slice(2, 8);
@@ -5240,21 +5239,32 @@ function mpConnectMQTT(onReady){
     console.error('mqtt.connect threw', e);
     return;
   }
-  let subscribed = false;
+
+  // ✅ ОДИН обработчик сообщений на весь жизненный цикл клиента.
+  // Он не зависит от connect/disconnect и не регистрируется повторно.
+  client.on('message', (topic, payload) => {
+    let msg;
+    try{ msg = JSON.parse(payload.toString()); }catch(_){ return; }
+    mpOnMessage(msg);
+  });
+
+  let subscribedOnce = false;
   client.on('connect', () => {
     console.log('✅ MQTT подключён к', url);
     MP.client = client;
-    client.on('message', (topic, payload) => {
-      let msg;
-      try{ msg = JSON.parse(payload.toString()); }catch(_){ return; }
-      mpOnMessage(msg);
-    });
-    if(!subscribed){
-      subscribed = true;
-      onReady(client);
-    } else {
-      client.subscribe('vvg/room/' + MP.roomCode, { qos: 0 }, () => {});
+
+    if(!subscribedOnce){
+      subscribedOnce = true;
+      onReady(client);       // хост/гость подписываются сами внутри onReady
     }
+    // при реконнекте mqtt.js (resubscribe:true) подпишется сам — вручную не надо
+  });
+
+  client.on('reconnect', () => { console.log('🔄 MQTT reconnect…'); });
+  client.on('error', (e) => { console.warn('MQTT error:', e.message); });
+  client.on('offline', () => { console.warn('MQTT offline'); });
+  client.on('close', () => { console.warn('MQTT close — mqtt.js сам переподключится'); });
+}
   });
   client.on('error', (e) => {
     console.warn('MQTT error:', e.message);
@@ -5267,7 +5277,7 @@ function mpConnectMQTT(onReady){
   });
 }
 
-function mpBroadcast(msg){
+  function mpBroadcast(msg){
   const mid = MP.myId + '_' + (++mpMsgCounter);
   const payload = { ...msg, from: MP.myId, ts: Date.now(), mid };
   if(MP.bc){
