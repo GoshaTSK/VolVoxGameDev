@@ -5226,12 +5226,12 @@ function mpConnectMQTT(onReady){
   const clientId = 'vvg_' + MP.myId + '_' + Math.random().toString(36).slice(2, 8);
   let client;
   try{
-    client = mqtt.connect(url, {
+        client = mqtt.connect(url, {
       clientId,
       clean: true,
-      keepalive: 60,
-      connectTimeout: 15000,
-      reconnectPeriod: 3000,
+      keepalive: 300,
+      connectTimeout: 20000,
+      reconnectPeriod: 5000,
       resubscribe: true,
       protocolVersion: 4,
     });
@@ -5248,16 +5248,22 @@ function mpConnectMQTT(onReady){
     mpOnMessage(msg);
   });
 
-  let subscribedOnce = false;
+    let subscribedOnce = false;
   client.on('connect', () => {
     console.log('✅ MQTT подключён к', url);
     MP.client = client;
 
     if(!subscribedOnce){
       subscribedOnce = true;
-      onReady(client);       // хост/гость подписываются сами внутри onReady
+      onReady(client);
+    } else if(MP.active && !MP.isHost){
+      // Реконнект. Гость шлёт hello заново, чтобы хост прислал актуальный проект.
+      setTimeout(() => {
+        if(MP.active && !MP.isHost && MP.roomCode){
+          mpBroadcast({ t:'hello', id: MP.myId, name: MP.myName });
+        }
+      }, 300);
     }
-    // при реконнекте mqtt.js (resubscribe:true) подпишется сам — вручную не надо
   });
 
   client.on('reconnect', () => { console.log('🔄 MQTT reconnect…'); });
@@ -5369,12 +5375,11 @@ function mpOnMessage(msg){
   }
   let needsUi = false;
   switch(msg.t){
-    case 'hello':
+        case 'hello':
       {
-        const wasNew = !MP.peers.has(msg.id);
         mpEnsurePeer(msg.id, msg.name, false);
         mpBroadcast({ t:'hi', id: MP.myId, name: MP.myName, isHost: MP.isHost });
-        if(MP.isHost && wasNew){
+        if(MP.isHost){
           try{ mpBroadcast({ t:'project', target: msg.id, data: mpSerializeProject() }); }
           catch(e){ console.warn('mp serialize', e); }
         }
