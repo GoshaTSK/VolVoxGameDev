@@ -5283,6 +5283,7 @@ function mpConnectMQTT(onReady){
   return {
     x: o.position.x, y: o.position.z, z: o.position.y,
     ry: o.rotation.y,
+    sx: o.scale.x, sy: o.scale.y, sz: o.scale.z,
     hp: o.userData.hp ?? 0,
     visible: o.visible,
     dead: !!o.userData.dead,
