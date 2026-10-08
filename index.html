@@ -5553,10 +5553,8 @@ function mpUpdatePeerState(msg){
     }
   }
   // Буфер позиций с временными метками
+    // Буфер позиций с временными метками
   if(!p.buffer) p.buffer = [];
-  p.buffer.push({ t: now, x: msg.x, y: msg.y, z: msg.z, ry: msg.ry });
-  while(p.buffer.length > 1 && now - p.buffer[0].t > 1000) p.buffer.shift();
- if(!p.buffer) p.buffer = [];
   p.buffer.push({ t: now, x: msg.x, y: msg.y, z: msg.z, ry: msg.ry });
   while(p.buffer.length > 1 && now - p.buffer[0].t > 1000) p.buffer.shift();
   p.lastSeen = now;
