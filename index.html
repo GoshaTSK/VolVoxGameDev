@@ -5265,18 +5265,7 @@ function mpConnectMQTT(onReady){
   client.on('offline', () => { console.warn('MQTT offline'); });
   client.on('close', () => { console.warn('MQTT close — mqtt.js сам переподключится'); });
 }
-  });
-  client.on('error', (e) => {
-    console.warn('MQTT error:', e.message);
-  });
-  client.on('offline', () => {
-    console.warn('MQTT offline');
-  });
-  client.on('close', () => {
-    console.warn('MQTT close — mqtt.js сам переподключится');
-  });
-}
-
+ 
   function mpBroadcast(msg){
   const mid = MP.myId + '_' + (++mpMsgCounter);
   const payload = { ...msg, from: MP.myId, ts: Date.now(), mid };
