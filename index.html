@@ -2964,6 +2964,7 @@ function saveSnapshot(){
 function restoreSnapshot(){
   if(!snapshot) return;
   snapshot.forEach(s => {
+    if(isPlayer(s.obj)) return;
     s.obj.position.copy(s.pos); s.obj.rotation.copy(s.rot); s.obj.scale.copy(s.scale);
     s.obj.visible = s.visible;
     s.obj.userData.dead = s.dead || false;
