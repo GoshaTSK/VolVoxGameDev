@@ -5279,6 +5279,16 @@ function mpConnectMQTT(onReady){
   }
 }
 
+  function mpSerializeLight(o){
+  return {
+    x: o.position.x, y: o.position.z, z: o.position.y,
+    ry: o.rotation.y,
+    hp: o.userData.hp ?? 0,
+    visible: o.visible,
+    dead: !!o.userData.dead,
+  };
+}
+
 function mpHashObj(o){
   return [
     o.position.x.toFixed(2), o.position.y.toFixed(2), o.position.z.toFixed(2),
@@ -5305,19 +5315,21 @@ function mpAssignNetIdsToScene(){
 }
 function mpApplyNetData(o, dd){
   o.position.set(dd.x, dd.z, dd.y);
-  o.rotation.set(0, dd.ry, 0);
-  o.scale.set(dd.sx, dd.sy, dd.sz);
-  o.userData.solid = !!dd.solid;
-  o.userData.layer2D = dd.layer2D || 0;
-  o.userData.texture = dd.texture || 'none';
-  o.userData.invulnerable = !!dd.invulnerable;
-  o.userData.hp = dd.hp ?? 0;
-  o.userData.maxHp = dd.maxHp ?? 0;
+  if(dd.ry !== undefined) o.rotation.set(0, dd.ry, 0);
+  if(dd.sx !== undefined) o.scale.set(dd.sx, dd.sy, dd.sz);
+  if(dd.solid !== undefined) o.userData.solid = !!dd.solid;
+  if(dd.layer2D !== undefined) o.userData.layer2D = dd.layer2D || 0;
+  if(dd.texture !== undefined) o.userData.texture = dd.texture || 'none';
+  if(dd.invulnerable !== undefined) o.userData.invulnerable = !!dd.invulnerable;
+  if(dd.hp !== undefined) o.userData.hp = dd.hp;
+  if(dd.maxHp !== undefined) o.userData.maxHp = dd.maxHp;
   if(dd.label) o.userData.label = dd.label;
   if(dd.color) setColor(o, dd.color);
   if(dd.blocklyXml && o.userData.blocklyXml !== dd.blocklyXml){
     o.userData.blocklyXml = dd.blocklyXml;
   }
+  if(dd.visible !== undefined) o.visible = dd.visible;
+  if(dd.dead !== undefined) o.userData.dead = dd.dead;
   if(dd.texture && dd.texture !== 'none') applyTextureToObject(o, dd.texture);
 }
 function mpScanAndSyncScene(){
@@ -5334,7 +5346,7 @@ function mpScanAndSyncScene(){
     if(prev === undefined){ mpLastSnapshot.set(o.userData.netId, h); continue; }
     if(prev !== h){
       mpLastSnapshot.set(o.userData.netId, h);
-      batch.push({ netId: o.userData.netId, data: serializeObject(o) });
+      batch.push({ netId: o.userData.netId, data: mpSerializeLight(o) });
     }
   }
   if(batch.length) mpBroadcast({ t:'obj_batch', items: batch });
