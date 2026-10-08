@@ -4252,23 +4252,43 @@ function animate(){
     }
   } else {
     if(raceActive && !raceFinished && alive){ raceTime += dt; updateTimerDisplay(); }
+       // Кто симулирует мир: локально (одиночная игра) или хост (в MP).
+    const simulateWorld = !MP.active || MP.isHost;
+
     if(alive && !raceFinished){
       if(dimension === '2d'){
-        updatePlayer2D(dt); updateEnemies2D(dt);
-        updatePlayerShooting(dt); updatePlayCamera(); updateFinishCheck();
-        updateHearts(); updateCoins(); updateHazards();
+        updatePlayer2D(dt);
+        updatePlayerShooting(dt);
+        updatePlayCamera();
+        if(simulateWorld) updateEnemies2D(dt);
+        updateFinishCheck();
+        updateHearts();
+        updateCoins();
+        updateHazards();
       } else {
-        updatePlayer3D(dt); updateGravity(dt); updateEnemies3D(dt);
-        updatePlayerShooting(dt); updatePlayCamera(); updateFinishCheck();
-        updateHearts(); updateCoins(); updateHazards();
+        updatePlayer3D(dt);
+        updatePlayerShooting(dt);
+        updatePlayCamera();
+        if(simulateWorld){
+          updateGravity(dt);
+          updateEnemies3D(dt);
+        }
+        updateFinishCheck();
+        updateHearts();
+        updateCoins();
+        updateHazards();
       }
-      boxCache.clear();
-      for(const o of objects){
-        if(o.userData._prog) runObjectScripts(o, dt);
+      if(simulateWorld){
+        boxCache.clear();
+        for(const o of objects){
+          if(o.userData._prog) runObjectScripts(o, dt);
+        }
       }
     }
     boxCache.clear();
-    updateProjectiles(dt); updatePlayerProjectiles(dt); updateParticles(dt);
+    if(simulateWorld) updateProjectiles(dt);   // снаряды врагов — только хост
+    updatePlayerProjectiles(dt);                 // снаряды своего игрока — оба клиента
+    updateParticles(dt);
     if(hitFlashTimer > 0){ hitFlashTimer -= dt; if(hitFlashTimer <= 0) hitFlash.classList.remove('active'); }
     if(scorePulseTimer > 0){ scorePulseTimer -= dt; if(scorePulseTimer <= 0) scoreHud.classList.remove('hit'); }
   }
