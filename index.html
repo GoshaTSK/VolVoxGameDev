@@ -1933,6 +1933,15 @@ function updateWeather(dt){
     }
   }
 }
+  
+
+// debug: expose weather to console
+try{
+  window.setWeather = setWeather;
+  window.updateWeather = updateWeather;
+  window.triggerLightning = triggerLightning;
+  window.WEATHER_MODES = WEATHER_MODES;
+}catch(_){}
 
 const enemyCooldowns = new Map();
 const PROJ_SPEED = 13, PROJ_RADIUS = 0.14, PROJ_LIFETIME = 3.0;
