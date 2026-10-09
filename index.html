@@ -4523,6 +4523,95 @@ $('btnBlocksExpand').onclick = () => {
   setBlocksFullscreen(!isFull);
 };
   $('btnBlocksClose').onclick = () => closeBlocksPanel();
+  
+/* ============ BLOCKS PANEL: DRAG & RESIZE ============ */
+(function initBlocksPanelDragResize(){
+  const el = document.getElementById('blocks');
+  if(!el) return;
+  const head = el.querySelector('.blocks-head');
+  const handle = document.getElementById('blocksResize');
+  if(!head || !handle) return;
+
+  try{
+    const saved = localStorage.getItem('vvg_blocks_geom');
+    if(saved){
+      const p = JSON.parse(saved);
+      if(p.w) el.style.width = p.w + 'px';
+      if(p.h) el.style.height = p.h + 'px';
+      if(p.left != null && p.top != null && !el.classList.contains('blocks-fullscreen')){
+        el.style.left = p.left + 'px';
+        el.style.top = p.top + 'px';
+        el.style.bottom = 'auto';
+      }
+    }
+  }catch(_){}
+
+  function saveGeom(){
+    if(el.classList.contains('blocks-fullscreen')) return;
+    const r = el.getBoundingClientRect();
+    try{
+      localStorage.setItem('vvg_blocks_geom', JSON.stringify({
+        left: r.left, top: r.top, w: r.width, h: r.height
+      }));
+    }catch(_){}
+  }
+
+  let dragging = false, dx = 0, dy = 0;
+  head.addEventListener('pointerdown', (e) => {
+    if(e.target.closest('button')) return;
+    if(el.classList.contains('blocks-fullscreen')) return;
+    const r = el.getBoundingClientRect();
+    dx = e.clientX - r.left;
+    dy = e.clientY - r.top;
+    dragging = true;
+    try{ head.setPointerCapture(e.pointerId); }catch(_){}
+    e.preventDefault();
+  });
+  head.addEventListener('pointermove', (e) => {
+    if(!dragging) return;
+    const nx = e.clientX - dx;
+    const ny = e.clientY - dy;
+    const maxL = window.innerWidth - 80;
+    const maxT = window.innerHeight - 60;
+    el.style.left = Math.max(-el.offsetWidth + 100, Math.min(maxL, nx)) + 'px';
+    el.style.top = Math.max(54, Math.min(maxT, ny)) + 'px';
+    el.style.bottom = 'auto';
+  });
+  head.addEventListener('pointerup', (e) => {
+    if(!dragging) return;
+    dragging = false;
+    try{ head.releasePointerCapture(e.pointerId); }catch(_){}
+    saveGeom();
+  });
+
+  let resizing = false, rw = 0, rh = 0, rx = 0, ry = 0;
+  handle.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    if(el.classList.contains('blocks-fullscreen')) return;
+    const r = el.getBoundingClientRect();
+    rw = r.width; rh = r.height; rx = e.clientX; ry = e.clientY;
+    resizing = true;
+    try{ handle.setPointerCapture(e.pointerId); }catch(_){}
+    e.preventDefault();
+  });
+  handle.addEventListener('pointermove', (e) => {
+    if(!resizing) return;
+    el.style.width = Math.max(400, rw + (e.clientX - rx)) + 'px';
+    el.style.height = Math.max(200, rh + (e.clientY - ry)) + 'px';
+  });
+  handle.addEventListener('pointerup', (e) => {
+    if(!resizing) return;
+    resizing = false;
+    try{ handle.releasePointerCapture(e.pointerId); }catch(_){}
+    saveGeom();
+    setTimeout(() => {
+      if(typeof Blockly !== 'undefined' && blocklyWs){
+        try{ Blockly.svgResize(blocklyWs); }catch(_){}
+      }
+    }, 80);
+  });
+})();
+
 
 updateBlocksExpandBtn();
 $('btnBlocksXml').onclick = () => {
