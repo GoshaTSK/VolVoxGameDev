@@ -3885,6 +3885,7 @@ function serializeObject(o){
     rampAngle: o.userData.rampAngle,
     blocklyXml: o.userData.blocklyXml || '',
     label: o.userData.label,
+    cloudWeather: o.userData.cloudWeather || 'none',
     netId: o.userData.netId || null,
   };
 }
@@ -3947,6 +3948,10 @@ function loadProjectData(data){
       if(dd.texture && dd.texture !== 'none') applyTextureToObject(o, dd.texture);
       if(dd.color) setColor(o, dd.color);
       if(dd.label) o.userData.label = dd.label;
+      if(dd.cloudWeather && dd.cloudWeather !== 'none'){
+        o.userData.cloudWeather = dd.cloudWeather;
+        ensureCloudRain(o);
+      }
       if(dd.netId) o.userData.netId = dd.netId;
       mpLastSnapshot.set(o.userData.netId, mpHashObj(o));      
     });
