@@ -4295,6 +4295,7 @@ function animate(){
     if(simulateWorld) updateProjectiles(dt);   // снаряды врагов — только хост
     updatePlayerProjectiles(dt);                 // снаряды своего игрока — оба клиента
     updateParticles(dt);
+    updateWeather(dt);
     if(hitFlashTimer > 0){ hitFlashTimer -= dt; if(hitFlashTimer <= 0) hitFlash.classList.remove('active'); }
     if(scorePulseTimer > 0){ scorePulseTimer -= dt; if(scorePulseTimer <= 0) scoreHud.classList.remove('hit'); }
   }
