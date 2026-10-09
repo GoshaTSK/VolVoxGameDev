@@ -2171,7 +2171,12 @@ function addObject(type, opts = {}){
     obj.userData.netId = MP.myId + '_' + (++mpNetCounter);
   }
   if(MP.active && !MP.applyingRemote && obj.userData.netId){
-    mpBroadcast({ t:'obj_add', netId: obj.userData.netId, data: serializeObject(obj) });
+        const _payload = { t:'obj_add', netId: obj.userData.netId, data: serializeObject(obj) };
+    if(obj.userData.type && obj.userData.type.startsWith('custom_')){
+      const _cid = obj.userData.type.slice(7);
+      if(customModels[_cid]) _payload.customModel = customModels[_cid];
+    }
+    mpBroadcast(_payload);
     mpLastSnapshot.set(obj.userData.netId, mpHashObj(obj));
   }
 
@@ -5846,6 +5851,8 @@ function mpConnectMQTT(onReady){
 }
 
   function mpSerializeLight(o){
+  let col = null;
+  o.traverse(m => { if(!col && m.isMesh && !m.userData._outline && m.material && m.material.color) col = '#' + m.material.color.getHexString(); });
   return {
     x: o.position.x, y: o.position.z, z: o.position.y,
     ry: o.rotation.y,
@@ -5853,21 +5860,30 @@ function mpConnectMQTT(onReady){
     hp: o.userData.hp ?? 0,
     visible: o.visible,
     dead: !!o.userData.dead,
+    color: col,
+    solid: !!o.userData.solid,
+    layer2D: o.userData.layer2D || 0,
+    invulnerable: !!o.userData.invulnerable,
+    label: o.userData.label || '',
+    cloudWeather: o.userData.cloudWeather || 'none',
   };
 }
 
 function mpHashObj(o){
+  let col = null;
+  o.traverse(m => { if(!col && m.isMesh && !m.userData._outline && m.material && m.material.color) col = m.material.color.getHexString(); });
   return [
     o.position.x.toFixed(2), o.position.y.toFixed(2), o.position.z.toFixed(2),
-    o.rotation.x.toFixed(2), o.rotation.y.toFixed(2), o.rotation.z.toFixed(2),
+    o.rotation.y.toFixed(2),
     o.scale.x.toFixed(2), o.scale.y.toFixed(2), o.scale.z.toFixed(2),
     o.visible ? 1 : 0,
-    o.userData.texture || 'none',
+    col || '',
     o.userData.solid ? 1 : 0,
     o.userData.hp || 0,
     o.userData.invulnerable ? 1 : 0,
-    (o.userData.blocklyXml || '').length,
-    o.userData.label || ''
+    o.userData.label || '',
+    o.userData.cloudWeather || 'none',
+    o.userData.dead ? 1 : 0,
   ].join('|');
 }
 function mpAssignNetIdsToScene(){
@@ -5897,6 +5913,10 @@ function mpApplyNetData(o, dd){
   }
   if(dd.visible !== undefined) o.visible = dd.visible;
   if(dd.dead !== undefined) o.userData.dead = dd.dead;
+    if(dd.cloudWeather !== undefined && o.userData.isCloud){
+    o.userData.cloudWeather = dd.cloudWeather;
+    ensureCloudRain(o);
+  }
   if(dd.texture && dd.texture !== 'none') applyTextureToObject(o, dd.texture);
 }
 function mpScanAndSyncScene(){
@@ -5960,12 +5980,22 @@ function mpOnMessage(msg){
     case 'shoot':
       mpRemoteShoot(msg);
       break;
-     case 'obj_add':
+         case 'obj_add':
       if(msg.data && msg.data.type === 'player') break;
       MP.applyingRemote = true;
       try{
         if(!objects.find(o => o.userData.netId === msg.netId)){
           const dd = msg.data;
+          if(dd.type && dd.type.startsWith('custom_') && msg.customModel){
+            const id = dd.type.slice(7);
+            if(!customModels[id]){
+              customModels[id] = msg.customModel;
+              if(!PALETTE.find(p => p.type === dd.type)){
+                PALETTE.push({ type: dd.type, name: msg.customModel.name || 'Модель', icon: '★', solid: true, custom: true });
+                renderPalette();
+              }
+            }
+          }
           const o = addObject(dd.type, {
             x: dd.x, y: dd.y, z: dd.z, ry: dd.ry,
             hp: dd.maxHp, zoneRadius: dd.zoneRadius, rampAngle: dd.rampAngle,
