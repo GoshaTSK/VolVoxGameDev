@@ -3311,6 +3311,11 @@ window.addEventListener('keydown', e => {
   if(mode === 'build' && (e.code === 'Delete' || e.code === 'Backspace')){
     if(selected){ e.preventDefault(); removeObject(selected); return; }
   }
+    if(e.shiftKey && e.code === 'KeyF' && mode === 'build'){
+    e.preventDefault();
+    toggleBlocksPanel();
+    return;
+  }
   if(mode === 'build' && dimension === '2d' && (e.code === 'Digit0' || e.code === 'Numpad0')){
     set2DZoom(1); camera2D.position.set(0, VIEW_2D_CENTER_Y, 40); camera2D.lookAt(0, VIEW_2D_CENTER_Y, 0); return;
   }
@@ -3321,9 +3326,16 @@ window.addEventListener('keydown', e => {
     if(e.code === 'KeyR') restartPlay();
   }
   if(e.code === 'Escape'){
-        if(appEl.classList.contains('blocks-fullscreen')){
-      setBlocksFullscreen(false);
-      return;
+           {
+      const blocksEl2 = document.getElementById('blocks');
+      if(blocksEl2 && blocksEl2.classList.contains('blocks-fullscreen')){
+        setBlocksFullscreen(false);
+        return;
+      }
+      if(blocksEl2 && blocksEl2.classList.contains('active')){
+        closeBlocksPanel();
+        return;
+      }
     }
     if($('gamesModal').classList.contains('active')){ closeGamesModal(); return; }
     if($('settingsModal').classList.contains('active')){ $('settingsModal').classList.remove('active'); return; }
@@ -4510,6 +4522,8 @@ $('btnBlocksExpand').onclick = () => {
   const isFull = el && el.classList.contains('blocks-fullscreen');
   setBlocksFullscreen(!isFull);
 };
+  $('btnBlocksClose').onclick = () => closeBlocksPanel();
+
 updateBlocksExpandBtn();
 $('btnBlocksXml').onclick = () => {
   if(!selected){ toast('Сначала выберите объект'); return; }
