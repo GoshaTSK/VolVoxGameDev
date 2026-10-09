@@ -11,12 +11,7 @@
   html,body{height:100%}
   body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     background:var(--bg);color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased}
-  #app{display:grid;grid-template-rows:54px 1fr 236px;height:100vh;transition:grid-template-rows .25s}
-  #app.blocks-expanded{grid-template-rows:54px 120px 1fr}
-    #app.blocks-fullscreen{grid-template-rows:54px 0px 1fr}
-  #app.blocks-hidden{grid-template-rows:54px 1fr 0px}
-  #app.blocks-hidden #blocks{display:none}
-  #app.no-transition{transition:none!important}
+  #app{display:grid;grid-template-rows:54px 1fr;height:100vh}
   #topbar{display:flex;align-items:center;gap:8px;padding:0 12px;
     background:linear-gradient(180deg,#101d33,#0c1728);border-bottom:1px solid var(--border);z-index:10;
     overflow-x:auto;scrollbar-width:none}
@@ -332,8 +327,21 @@
   .hp-note{font-size:11.5px;color:#fecaca;line-height:1.55;
     background:#3b0f0f;border:1px solid #b91c1c;border-radius:8px;margin:10px 15px 0;padding:9px 12px}
 
-  #blocks{background:var(--panel);border-top:1px solid var(--border);
-    display:flex;flex-direction:column;overflow:hidden;position:relative;min-height:0}
+  #blocks{position:fixed;z-index:180;
+    left:20px;bottom:20px;width:min(1100px, 85vw);height:380px;
+    background:var(--panel);border:1px solid var(--border);border-radius:14px;
+    display:none;flex-direction:column;overflow:hidden;
+    box-shadow:0 20px 60px rgba(0,0,0,.55);min-width:400px;min-height:200px}
+  #blocks.active{display:flex;animation:blocksPop .22s ease-out}
+  @keyframes blocksPop{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+  #blocks.blocks-fullscreen{left:0!important;top:54px!important;right:0!important;bottom:0!important;width:auto!important;height:auto!important;border-radius:0}
+  #blocks .blocks-head{cursor:grab;user-select:none}
+  #blocks .blocks-head:active{cursor:grabbing}
+  #blocks .blocks-resize{position:absolute;right:0;bottom:0;width:16px;height:16px;
+    cursor:nwse-resize;z-index:2;
+    background:linear-gradient(135deg,transparent 45%,#38bdf8 45%,#38bdf8 55%,transparent 55%),
+               linear-gradient(135deg,transparent 65%,#38bdf8 65%,#38bdf8 72%,transparent 72%);
+    border-bottom-right-radius:14px}
   .blocks-head{display:flex;align-items:center;gap:12px;padding:8px 14px;
     border-bottom:1px solid var(--border);background:#0c1728;flex:none}
   .blocks-head h3{font-size:12.5px;font-weight:700}
@@ -641,17 +649,19 @@
     </aside>
   </div>
   <section id="blocks">
-    <div class="blocks-head">
-      <h3>🧩 Логика: <em id="blocksTarget">объект не выбран</em></h3>
-      <span id="blocksCount" style="font-size:11px;color:#7c8fa9"></span>
-      <div style="flex:1"></div>
-      <button class="btn" id="btnBlocksExample">💡 Пример</button>
-      <button class="btn" id="btnBlocksXml">💾 XML</button>
-      <button class="btn danger" id="btnBlocksClear">🗑 Очистить</button>
-      <button class="btn" id="btnBlocksExpand" title="Развернуть панель логики">⛶</button>
-    </div>
-    <div id="blocklyDiv"></div>
-  </section>
+  <div class="blocks-head">
+    <h3>🧩 Логика: <em id="blocksTarget">объект не выбран</em></h3>
+    <span id="blocksCount" style="font-size:11px;color:#7c8fa9"></span>
+    <div style="flex:1"></div>
+    <button class="btn" id="btnBlocksExample">💡 Пример</button>
+    <button class="btn" id="btnBlocksXml">💾 XML</button>
+    <button class="btn danger" id="btnBlocksClear">🗑 Очистить</button>
+    <button class="btn" id="btnBlocksExpand" title="Развернуть панель логики (Shift+F)">⛶</button>
+    <button class="btn" id="btnBlocksClose" title="Закрыть (Esc)">✕</button>
+  </div>
+  <div id="blocklyDiv"></div>
+  <div class="blocks-resize" id="blocksResize"></div>
+</section>
 </div>
 
 <div class="mp-modal" id="mpModal">
@@ -3138,14 +3148,9 @@ function setMode(m){
   mode = m;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
   mainEl.classList.toggle('playing', m === 'play');
-  blocksEl.style.display = (m === 'play') ? 'none' : 'flex';
-  appEl.classList.remove('blocks-expanded');
-  appEl.classList.add('no-transition');
-  if(m === 'play') appEl.style.gridTemplateRows = '54px 1fr';
-  else if(appEl.classList.contains('blocks-hidden')) appEl.style.gridTemplateRows = '54px 1fr 0px';
-  else appEl.style.gridTemplateRows = '54px 1fr 236px';
-  void appEl.offsetHeight;
-  appEl.classList.remove('no-transition');
+    if(m === 'play'){
+    closeBlocksPanel();
+  }
   controls.enabled = (m === 'build' && dimension === '3d');
   if(cam2DPanning){ cam2DPanning = false; canvas.style.cursor = ''; mainEl.classList.remove('panning'); }
   if(dragState){ try { canvas.releasePointerCapture(dragState.pointerId); } catch(_){} dragState = null; canvas.style.cursor = ''; mainEl.classList.remove('dragging'); }
@@ -4015,13 +4020,7 @@ $('fileLoad').addEventListener('change', (ev) => {
 /* ========== КНОПКИ UI ========== */
 $('btnToggleBlocks').onclick = () => {
   if(mode === 'play') return;
-  appEl.classList.toggle('blocks-hidden');
-  $('btnToggleBlocks').classList.toggle('on', appEl.classList.contains('blocks-hidden'));
-  ensureResize();
-  requestAnimationFrame(() => {
-    ensureResize();
-    if(typeof Blockly !== 'undefined' && blocklyWs){ try{ Blockly.svgResize(blocklyWs); }catch(_){} }
-  });
+  toggleBlocksPanel();
 };
 
 /* ========== НАСТРОЙКИ ========== */
@@ -4471,26 +4470,45 @@ function updateBlocksExpandBtn(){
   btn.classList.toggle('on', isFull);
 }
 
+function openBlocksPanel(){
+  if(mode === 'play') return;
+  const el = document.getElementById('blocks');
+  if(!el) return;
+  el.classList.add('active');
+  $('btnToggleBlocks').classList.add('on');
+  setTimeout(() => {
+    if(typeof Blockly !== 'undefined' && blocklyWs){ try{ Blockly.svgResize(blocklyWs); }catch(_){} }
+  }, 220);
+}
+function closeBlocksPanel(){
+  const el = document.getElementById('blocks');
+  if(!el) return;
+  el.classList.remove('active', 'blocks-fullscreen');
+  $('btnToggleBlocks').classList.remove('on');
+  updateBlocksExpandBtn();
+}
+function toggleBlocksPanel(){
+  const el = document.getElementById('blocks');
+  if(!el) return;
+  if(el.classList.contains('active')) closeBlocksPanel();
+  else openBlocksPanel();
+}
 function setBlocksFullscreen(on){
   if(mode === 'play') return;
-  appEl.classList.remove('blocks-expanded', 'blocks-hidden');
-  $('btnToggleBlocks').classList.remove('on');
-  appEl.classList.toggle('blocks-fullscreen', !!on);
+  const el = document.getElementById('blocks');
+  if(!el) return;
+  if(on) el.classList.add('active');
+  el.classList.toggle('blocks-fullscreen', !!on);
   updateBlocksExpandBtn();
-  // Даём гриду примениться, потом три раза пересчитываем размеры —
-  // чтобы Blockly и canvas успели подхватить новую высоту
-  requestAnimationFrame(() => {
-    ensureResize();
-    if(typeof Blockly !== 'undefined' && blocklyWs){ try{ Blockly.svgResize(blocklyWs); }catch(_){} }
-  });
   setTimeout(() => {
-    ensureResize();
     if(typeof Blockly !== 'undefined' && blocklyWs){ try{ Blockly.svgResize(blocklyWs); }catch(_){} }
-  }, 260);
+  }, 220);
 }
 
 $('btnBlocksExpand').onclick = () => {
-  setBlocksFullscreen(!appEl.classList.contains('blocks-fullscreen'));
+  const el = document.getElementById('blocks');
+  const isFull = el && el.classList.contains('blocks-fullscreen');
+  setBlocksFullscreen(!isFull);
 };
 updateBlocksExpandBtn();
 $('btnBlocksXml').onclick = () => {
