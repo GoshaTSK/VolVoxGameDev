@@ -1238,6 +1238,19 @@ function makeApi(obj, rt){
       doShake();
     },
     message(t){ toast(String(t == null ? '' : t)); },
+        // Погода / небо
+    setWeather(mode){
+      mode = String(mode || 'clear').toLowerCase();
+      if(!WEATHER_MODES[mode]) mode = 'clear';
+      setWeather(mode);
+    },
+    lightning(){ triggerLightning(); },
+    thunder(){ triggerLightning(); },
+    setWind(x, z){
+      weatherState.windX = Number(x) || 0;
+      weatherState.windZ = Number(z) || 0;
+    },
+    getWeather(){ return weatherState.mode; },
   };
 }
 function initRuntimeState(obj){
