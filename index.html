@@ -1933,6 +1933,9 @@ function setWeather(mode){
   if(typeof sun !== 'undefined' && sun){
     sun.intensity = 2.0 * (def.lightInt ?? 1);
   }
+    if(typeof MP !== 'undefined' && MP.active && !MP.applyingRemote && MP.isHost){
+    mpBroadcast({ t:'weather', mode });
+  }
 }
 
 function triggerLightning(){
@@ -6033,6 +6036,12 @@ function mpOnMessage(msg){
       if(msg.target === MP.myId){
         const n = Math.max(0, Math.round(msg.amount || 1));
         for(let i = 0; i < n; i++) onPlayerHit();
+      }
+      break;
+        case 'weather':
+      if(msg.mode && WEATHER_MODES[msg.mode]){
+        MP.applyingRemote = true;
+        try{ setWeather(msg.mode); } finally { MP.applyingRemote = false; }
       }
       break;
     case 'bye':
