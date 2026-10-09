@@ -2761,6 +2761,18 @@ function renderInspector(){
   if(isWater)    html += `<div class="water-note"><b>💧 Вода.</b> Полупрозрачная.</div>`;
   if(isLava)     html += `<div class="lava-note"><b>🔥 Лава.</b> Наносит урон.</div>`;
   if(isCloud)    html += `<div class="cloud-note"><b>☁️ Облако.</b> Парит в воздухе.</div>`;
+    if(isCloud){
+    const cw = selected.userData.cloudWeather || 'none';
+    html += `<div class="section"><h4>Погода облака</h4>
+      <select id="cloudWeatherSel" style="width:100%;padding:9px 12px;background:#0a1424;
+        border:1px solid var(--border);border-radius:8px;color:#fff;font:inherit;font-size:13px;outline:none">
+        <option value="none"${cw==='none'?' selected':''}>— Нет —</option>
+        <option value="rain"${cw==='rain'?' selected':''}>🌧 Дождь под облаком</option>
+        <option value="snow"${cw==='snow'?' selected':''}>❄ Снег под облаком</option>
+        <option value="storm"${cw==='storm'?' selected':''}>⛈ Гроза под облаком</option>
+      </select>
+    </div>`;
+  }
   if(isMountain) html += `<div class="mountain-note"><b>⛰️ Гора.</b> Массивное препятствие.</div>`;
   if(objHp > 0 && !invulnerable) html += `<div class="hp-note"><b>⚔ Разрушаемый.</b> HP: ${objHp}. Попадания выстрелов уменьшают HP, при 0 — разрушается.</div>`;
 
@@ -2906,6 +2918,15 @@ function renderInspector(){
   inspBody.querySelectorAll('.layer-btn').forEach(btn => {
     btn.onclick = () => { selected.userData.layer2D = parseInt(btn.dataset.layer); applyLayer2D(); renderInspector(); };
   });
+    const cwSel = $('cloudWeatherSel');
+  if(cwSel){
+    cwSel.onchange = () => {
+      selected.userData.cloudWeather = cwSel.value;
+      ensureCloudRain(selected);
+      refreshSceneList();
+    };
+  }
+
   $('btnDup').onclick = () => {
     const copy = addObject(selected.userData.type, {
       x: selected.position.x + 1.6, y: selected.position.z + 1.6, z: selected.position.y,
