@@ -4648,6 +4648,7 @@ function animate(){
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
   elapsed += dt;
+  const simulateWorld = !MP.active || MP.isHost;
   boxCache.clear();
   ensureResize();
 
