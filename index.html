@@ -938,6 +938,14 @@ function initBlocklyBlocks(){
   J.forBlock['game_blink']=(b,g)=>`api.blink(${V(b,g,'N')});\n`;
   J.forBlock['game_shake']=(b,g)=>`api.shake(${V(b,g,'POWER')});\n`;
   J.forBlock['game_message']=(b,g)=>`api.message(${V(b,g,'T')});\n`;
+  
+  /* --- Погода / небо --- */
+  J.forBlock['weather_set'] = b => `api.setWeather(${JSON.stringify(b.getFieldValue('MODE'))});\n`;
+  J.forBlock['weather_lightning'] = () => `api.lightning();\n`;
+  J.forBlock['weather_thunder'] = () => `api.thunder();\n`;
+  J.forBlock['weather_wind'] = (b,g) => `api.setWind(${V(b,g,'WX')}, ${V(b,g,'WZ')});\n`;
+  J.forBlock['weather_get'] = () => ['api.getWeather()', O.ATOMIC];
+
   J.forBlock['variables_get']=b=>[`api.getVar(${JSON.stringify(b.getFieldValue('VAR'))})`,O.ATOMIC];
   J.forBlock['variables_set']=(b,g)=>`api.setVar(${JSON.stringify(b.getFieldValue('VAR'))}, ${V(b,g,'VALUE',O.NONE)});\n`;
   J.forBlock['math_change']=(b,g)=>`api.changeVar(${JSON.stringify(b.getFieldValue('VAR'))}, ${V(b,g,'DELTA',O.NONE)});\n`;
