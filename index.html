@@ -1793,6 +1793,147 @@ const FALL_DAMAGE_VY = -14;
 const SNAP_STEP = 0.5;
 
 const projectiles = [], playerProjectiles = [], particleSystems = [];
+  
+/* ============ WEATHER ============ */
+const WEATHER_MODES = {
+  clear:    { name:'Ясно',      rain:0,    cloudColor:0x9ec5ff, fogNear:60, fogFar:160, skyTint:null,      lightInt:1.0 },
+  cloudy:   { name:'Облачно',   rain:0,    cloudColor:0xb8c4d8, fogNear:50, fogFar:140, skyTint:0x8792a8, lightInt:0.85 },
+  overcast: { name:'Пасмурно',  rain:0,    cloudColor:0x8a93a6, fogNear:35, fogFar:110, skyTint:0x5e6a80, lightInt:0.7 },
+  rain:     { name:'Дождь',     rain:1.0,  cloudColor:0x5f6b80, fogNear:25, fogFar:90,  skyTint:0x46526a, lightInt:0.55 },
+  storm:    { name:'Гроза',     rain:1.6,  cloudColor:0x3d4556, fogNear:18, fogFar:75,  skyTint:0x2d3546, lightInt:0.45, lightning:true },
+  snow:     { name:'Снег',      rain:0.7,  cloudColor:0xc8d4e6, fogNear:40, fogFar:120, skyTint:0xa8b4cc, lightInt:0.75, isSnow:true },
+  fog:      { name:'Туман',     rain:0,    cloudColor:0xa8b0c0, fogNear:8,  fogFar:40,  skyTint:0x808a9c, lightInt:0.65 },
+};
+
+const weatherState = {
+  mode: 'clear',
+  windX: 0,
+  windZ: 0,
+  globalRain: null,
+  lightningFlash: 0,
+  lightningTimer: 0,
+  thunderShakeCooldown: 0,
+};
+
+function createWeatherParticles(count, area, areaY, isSnow){
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(count * 3);
+  for(let i = 0; i < count; i++){
+    positions[i*3]   = (Math.random() - 0.5) * area;
+    positions[i*3+1] = Math.random() * areaY;
+    positions[i*3+2] = (Math.random() - 0.5) * area;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({
+    color: isSnow ? 0xffffff : 0x9ec8ff,
+    size: isSnow ? 0.12 : 0.08,
+    transparent: true,
+    opacity: isSnow ? 0.9 : 0.7,
+    depthWrite: false,
+  });
+  const pts = new THREE.Points(geo, mat);
+  pts.userData.isWeather = true;
+  pts.userData.isSnow = !!isSnow;
+  pts.userData.area = area;
+  pts.userData.areaY = areaY;
+  pts.userData.fallSpeed = isSnow ? 2.2 : 14;
+  pts.frustumCulled = false;
+  return pts;
+}
+
+function setWeather(mode){
+  if(!WEATHER_MODES[mode]) mode = 'clear';
+  weatherState.mode = mode;
+
+  if(weatherState.globalRain){
+    scene.remove(weatherState.globalRain);
+    weatherState.globalRain.geometry.dispose();
+    weatherState.globalRain.material.dispose();
+    weatherState.globalRain = null;
+  }
+
+  const def = WEATHER_MODES[mode];
+  if(def.rain > 0){
+    const count = Math.round(1200 * def.rain);
+    weatherState.globalRain = createWeatherParticles(count, 40, 25, !!def.isSnow);
+    weatherState.globalRain.position.set(0, 0, 0);
+    scene.add(weatherState.globalRain);
+  }
+
+  const bg = BACKGROUNDS[currentBg] || BACKGROUNDS.night;
+  if(dimension === '3d'){
+    const tint = def.skyTint != null ? def.skyTint : bg.scene;
+    scene.background = new THREE.Color(tint);
+    scene.fog = new THREE.Fog(tint, def.fogNear, def.fogFar);
+  }
+
+  if(typeof sun !== 'undefined' && sun){
+    sun.intensity = 2.0 * (def.lightInt ?? 1);
+  }
+}
+
+function triggerLightning(){
+  weatherState.lightningFlash = 0.22;
+  weatherState.thunderShakeCooldown = 0.18;
+}
+
+function updateWeather(dt){
+  const def = WEATHER_MODES[weatherState.mode] || WEATHER_MODES.clear;
+
+  if(weatherState.globalRain){
+    const pts = weatherState.globalRain;
+    const arr = pts.geometry.attributes.position.array;
+    const area = pts.userData.area;
+    const areaY = pts.userData.areaY;
+    const fall = pts.userData.fallSpeed;
+    const wx = weatherState.windX * 3;
+    const wz = weatherState.windZ * 3;
+    for(let i = 0; i < arr.length; i += 3){
+      arr[i+1] -= fall * dt;
+      arr[i]   += wx * dt;
+      arr[i+2] += wz * dt;
+      if(arr[i+1] < -1){
+        arr[i+1] = areaY;
+        arr[i]   = (Math.random() - 0.5) * area;
+        arr[i+2] = (Math.random() - 0.5) * area;
+      }
+    }
+    pts.geometry.attributes.position.needsUpdate = true;
+
+    const p = objects.find(isPlayer);
+    if(p){
+      pts.position.x = p.position.x;
+      pts.position.z = p.position.z;
+    }
+  }
+
+  if(def.lightning && weatherState.lightningTimer <= 0){
+    weatherState.lightningTimer = 3 + Math.random() * 6;
+    if(Math.random() < 0.6) triggerLightning();
+  }
+  if(weatherState.lightningTimer > 0) weatherState.lightningTimer -= dt;
+
+  if(weatherState.lightningFlash > 0){
+    weatherState.lightningFlash -= dt;
+    const k = Math.max(0, weatherState.lightningFlash / 0.22);
+    if(typeof sun !== 'undefined' && sun){
+      sun.intensity = 2.0 * (def.lightInt ?? 1) + k * 4;
+    }
+    if(weatherState.lightningFlash <= 0 && typeof sun !== 'undefined' && sun){
+      sun.intensity = 2.0 * (def.lightInt ?? 1);
+    }
+  }
+
+  if(weatherState.thunderShakeCooldown > 0){
+    weatherState.thunderShakeCooldown -= dt;
+    if(dimension === '3d'){
+      const amp = 0.05;
+      camera3D.position.x += (Math.random() - 0.5) * amp;
+      camera3D.position.y += (Math.random() - 0.5) * amp;
+    }
+  }
+}
+
 const enemyCooldowns = new Map();
 const PROJ_SPEED = 13, PROJ_RADIUS = 0.14, PROJ_LIFETIME = 3.0;
 const ENEMY_RANGE = 22, ENEMY_MIN_CD = 2.0, ENEMY_MAX_CD = 3.0;
