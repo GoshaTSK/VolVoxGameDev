@@ -30,8 +30,15 @@ not a substitute for exporting a backup.
 
 ## Checks
 
-The project-format validation tests use Node.js's built-in test runner:
+The project workflow checks use Node.js's built-in test runner and do not need
+external services:
 
 ```sh
-node --test tests/project-format.test.mjs
+node --test
 ```
+
+They verify project JSON export/import and autosave/recovery behavior through
+the same persistence helpers used by the app, and request the editor page and
+its local modules over HTTP. They do not execute the browser app: Three.js and
+Blockly are loaded from public CDNs, and this repository has no browser
+automation runtime.
