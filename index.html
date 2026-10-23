@@ -13,11 +13,16 @@
   html,body{height:100%}
   body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     background:var(--bg);color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased}
-  #app{display:grid;grid-template-rows:54px 1fr;height:100vh}
-  #topbar{display:flex;align-items:center;gap:8px;padding:0 12px;
+  #app{display:grid;grid-template-rows:auto 1fr;height:100vh}
+  #topbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 12px;
     background:linear-gradient(180deg,#101d33,#0c1728);border-bottom:1px solid var(--border);z-index:10;
-    overflow-x:auto;scrollbar-width:none}
-  #topbar::-webkit-scrollbar{display:none}
+    overflow:visible}
+  .toolbar-group{display:flex;align-items:center;gap:7px;padding-left:10px;border-left:1px solid var(--border);flex:none}
+  .toolbar-label{color:var(--muted);font-size:8px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;white-space:nowrap}
+  .toolbar-group .tabs,.toolbar-group .dim-tab{flex:none}
+  .toolbar-project{gap:5px}
+  .toolbar-tools{gap:6px;flex:1 1 100%;flex-wrap:wrap;border-left:0;padding-left:0}
+  #topbar .spacer{display:none}
   /* ==== GUIDE PANEL ==== */
    .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:15px;white-space:nowrap}
   .logo-mark{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:14px;
@@ -538,12 +543,20 @@
 .mp-peer .role.host{background:#4c1d95;color:#e9d5ff}
 .mp-peer .role.guest{background:#0a1e28;color:#7dd3fc}
 .mp-peer .role.me{background:#0891b2;color:#fff}
+@media(max-width:1100px){
+#topbar{padding:8px 10px}
+.toolbar-group{flex-wrap:wrap}
+#main{height:auto}
+}
 @media(max-width:760px){
   body{overflow:auto}
   #app{height:auto;min-height:100vh;min-height:100dvh;grid-template-rows:auto auto}
   #topbar{position:sticky;top:0;height:auto;min-height:54px;overflow:visible;
     flex-wrap:wrap;padding:8px;align-content:center}
   #topbar .spacer{display:none}
+  .toolbar-group{gap:5px;padding-left:7px}
+  .toolbar-label{font-size:7px}
+  .toolbar-tools{flex:1 1 100%;border-left:0;padding-left:0}
   #main{height:auto;overflow:visible;grid-template-columns:minmax(0,1fr);
     grid-template-rows:minmax(220px,32vh) minmax(280px,52vh) minmax(220px,32vh)}
   #main.playing{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(65vh,1fr)}
@@ -589,30 +602,42 @@
 <div id="app">
   <header id="topbar" aria-label="Панель редактора">
     <div class="logo"><span class="logo-mark">◈</span> VolVoxGameDev <span class="badge" id="modeBadge">3D</span></div>
-    <div class="tabs">
-      <button class="tab active" data-mode="build" aria-pressed="true">🔨 Конструирование</button>
-      <button class="tab" data-mode="play" aria-pressed="false">▶ Играть</button>
+    <div class="toolbar-group" role="group" aria-label="Режим редактора">
+      <span class="toolbar-label">Режим</span>
+      <div class="tabs">
+        <button class="tab active" data-mode="build" aria-pressed="true">🔨 Конструирование</button>
+        <button class="tab" data-mode="play" aria-pressed="false">▶ Играть</button>
+      </div>
     </div>
-    <div class="dim-tab">
-      <button class="dim-btn active" data-dim="3d" aria-pressed="true">🎲 3D</button>
-      <button class="dim-btn" data-dim="2d" aria-pressed="false">📐 2D</button>
+    <div class="toolbar-group" role="group" aria-label="Размерность сцены">
+      <span class="toolbar-label">Сцена</span>
+      <div class="dim-tab">
+        <button class="dim-btn active" data-dim="3d" aria-pressed="true">🎲 3D</button>
+        <button class="dim-btn" data-dim="2d" aria-pressed="false">📐 2D</button>
+      </div>
     </div>
     <div class="spacer"></div>
     <div class="score-hud" id="scoreHud">❤️ <span id="scoreVal">0</span></div>
     <div class="timer-hud" id="timerHud">⏱ <span id="timerVal">00:00.00</span></div>
-    <button class="btn icon" id="btnToggleBlocks" title="Скрыть/показать панель логики" aria-label="Скрыть или показать панель логики">🧩</button>
-    <button class="btn icon" id="btnSettings" title="Настройки" aria-label="Настройки">⚙</button>
-    <button class="btn" id="btnSave" title="Сохранить проект в JSON" aria-label="Сохранить проект">💾</button>
-    <button class="btn" id="btnLoad" title="Загрузить проект из JSON" aria-label="Загрузить проект">📂</button>
-    <input type="file" id="fileLoad" accept=".json,application/json" style="display:none">
-    <div class="project-status" id="projectStatus" role="status" aria-live="polite">Автосохранение запускается…</div>
-    <button class="btn modeler" id="btnModeler" title="3D-моделлер">🎨 Моделлер</button>
-    <button class="btn games" id="btnGames">🎮 Примеры</button>
-    <button class="btn mp" id="btnMultiplayer">🌐 Мультиплеер</button>
-    <button class="btn" id="btnGuide">📖 Гайд</button>
-    <button class="btn transfer" id="btnTo2D">→ 2D</button>
-    <button class="btn transfer" id="btnTo3D">→ 3D</button>
-    <button class="btn" id="btnClear">Очистить</button>
+    <div class="toolbar-group toolbar-project" role="group" aria-label="Проект">
+      <span class="toolbar-label">Проект</span>
+      <button class="btn" id="btnSave" title="Сохранить проект в JSON" aria-label="Сохранить проект">💾</button>
+      <button class="btn" id="btnLoad" title="Загрузить проект из JSON" aria-label="Загрузить проект">📂</button>
+      <input type="file" id="fileLoad" accept=".json,application/json" style="display:none">
+      <div class="project-status" id="projectStatus" role="status" aria-live="polite">Автосохранение запускается…</div>
+    </div>
+    <div class="toolbar-group toolbar-tools" role="group" aria-label="Инструменты">
+      <span class="toolbar-label">Инструменты</span>
+      <button class="btn icon" id="btnToggleBlocks" title="Скрыть/показать панель логики" aria-label="Скрыть или показать панель логики">🧩</button>
+      <button class="btn icon" id="btnSettings" title="Настройки" aria-label="Настройки">⚙</button>
+      <button class="btn modeler" id="btnModeler" title="3D-моделлер">🎨 Моделлер</button>
+      <button class="btn games" id="btnGames">🎮 Примеры</button>
+      <button class="btn mp" id="btnMultiplayer">🌐 Мультиплеер</button>
+      <button class="btn" id="btnGuide">📖 Гайд</button>
+      <button class="btn transfer" id="btnTo2D">→ 2D</button>
+      <button class="btn transfer" id="btnTo3D">→ 3D</button>
+      <button class="btn" id="btnClear">Очистить</button>
+    </div>
   </header>
   <main id="main">
     <aside id="palette" aria-label="Библиотека объектов и список сцены">
@@ -6615,7 +6640,7 @@ window.addEventListener('beforeunload', () => {
     var topbar = document.getElementById('topbar');
     var clearBtn = document.getElementById('btnClear');
     if(topbar){
-      if(clearBtn) topbar.insertBefore(openBtn, clearBtn);
+      if(clearBtn) clearBtn.parentElement.insertBefore(openBtn, clearBtn);
       else topbar.appendChild(openBtn);
     }
   } else {
