@@ -17,6 +17,8 @@ Open <http://localhost:8000/> in a browser. Opening `index.html` directly as a
 ## Narrow screens and keyboard use
 
 On narrow screens, the editor panels stack vertically and the page can scroll.
+The toolbar stays in one row; secondary actions collapse into the “Ещё” menu
+when space is limited. Open it with Enter or Space, and close it with Escape.
 Palette items, scene objects, modeler parts, and custom switches can be focused
 with Tab and activated with Enter or Space.
 
@@ -26,10 +28,12 @@ Use the disk and folder buttons in the top toolbar to export a project as JSON
 or import a JSON project. Version 1 project files remain supported. The editor
 also keeps a local browser autosave while editing and offers to restore it on
 the next launch. Autosaves are stored in that browser's local storage and are
-not a substitute for exporting a backup. The toolbar reports pending changes,
-the most recent autosave, and project recovery/import/export results. If an
-operation fails, the status explains the next step; autosave failures commonly
-mean the browser's local storage is full or unavailable.
+not a substitute for exporting a backup. The cloud icon in the top toolbar
+shows the autosave state; focus or hover it to read the detailed status,
+including pending changes and project recovery/import/export results. The
+status remains available to screen readers. If an operation fails, it explains
+the next step; autosave failures commonly mean the browser's local storage is
+full or unavailable.
 
 ## Checks
 
