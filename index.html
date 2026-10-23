@@ -789,6 +789,13 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { CURRENT_PROJECT_VERSION, validateAndNormalizeProject } from './project-format.mjs';
+import {
+  parseProjectFile,
+  PROJECT_AUTOSAVE_KEY,
+  readProjectAutosave,
+  saveProjectAutosave,
+  serializeProjectFile,
+} from './project-persistence.mjs';
 
 const $ = id => document.getElementById(id);
 const viewport = $('viewport'), canvas = $('canvas'), mainEl = $('main');
@@ -4016,7 +4023,7 @@ function serializeObject(o){
 }
 function saveProject(){
   const data = serializeProjectData();
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const blob = new Blob([serializeProjectFile(data)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -4147,7 +4154,10 @@ $('fileLoad').addEventListener('change', (ev) => {
   const reader = new FileReader();
   reader.onload = () => {
     try{
-      const data = JSON.parse(reader.result);
+      const data = parseProjectFile(reader.result, {
+        objectTypes: PALETTE.map(item => item.type),
+        backgroundIds: Object.keys(BACKGROUNDS),
+      });
       loadProjectData(data);
     }catch(e){ console.error('Project import failed', e); toast(`❌ Проект не загружен: ${e.message}`); }
   };
@@ -4155,12 +4165,11 @@ $('fileLoad').addEventListener('change', (ev) => {
   ev.target.value = '';
 });
 
-const PROJECT_AUTOSAVE_KEY = 'vvg_project_autosave_v1';
 let projectAutosaveTimer = null;
 function persistProjectAutosave(){
   if(mode === 'play') return;
   try{
-    localStorage.setItem(PROJECT_AUTOSAVE_KEY, JSON.stringify(serializeProjectData()));
+    saveProjectAutosave(localStorage, serializeProjectData());
   }catch(error){
     console.error('Project autosave failed', error);
     toast('⚠️ Не удалось создать автосохранение (проверьте свободное место)');
@@ -4178,14 +4187,14 @@ function initializeProjectAutosave(){
 
   let saved;
   try{
-    saved = localStorage.getItem(PROJECT_AUTOSAVE_KEY);
+    saved = readProjectAutosave(localStorage);
   }catch(error){
     console.warn('Project autosave is unavailable', error);
     return;
   }
   if(!saved) return;
   try{
-    const recovered = validateAndNormalizeProject(JSON.parse(saved), {
+    const recovered = parseProjectFile(saved, {
       objectTypes: PALETTE.map(item => item.type),
       backgroundIds: Object.keys(BACKGROUNDS),
     });
