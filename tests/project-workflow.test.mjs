@@ -103,8 +103,10 @@ test('editor page and local workflow modules are served over HTTP', async () => 
   assert.match(toolbarGroups[1][2], /data-dim="3d"/);
   assert.match(toolbarGroups[2][2], /id="btnSave"[\s\S]*id="btnLoad"[\s\S]*id="projectStatus"/);
   assert.match(toolbarGroups[3][2], /id="btnToggleBlocks"[\s\S]*id="btnSettings"[\s\S]*id="btnGames"[\s\S]*id="btnClear"/);
-  assert.match(page, /@media\(max-width:1100px\)\{[\s\S]*?#topbar\{[^}]*flex-wrap:wrap/);
-  assert.match(page, /\.toolbar-tools\{flex:1 1 100%;border-left:0;padding-left:0\}/);
+  assert.match(page, /#app\{display:grid;grid-template-rows:auto 1fr;height:100vh\}/);
+  assert.match(page, /#topbar\{display:flex;align-items:center;flex-wrap:wrap;[^}]*overflow:visible\}/);
+  assert.match(page, /\.toolbar-tools\{[^}]*flex:1 1 100%;flex-wrap:wrap;[^}]*\}/);
+  assert.match(page, /#topbar \.spacer\{display:none\}/);
   assert.match(page, /clearBtn\.parentElement\.insertBefore\(openBtn, clearBtn\)/);
   assert.match(page, /setProjectStatus\(`Автосохранено/);
   assert.match(page, /reader\.onerror =/);
