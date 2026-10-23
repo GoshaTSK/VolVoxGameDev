@@ -8,6 +8,8 @@
   :root{--bg:#070c16;--panel:#0f1a2e;--panel-2:#152340;--border:#22334f;
     --text:#dbe6f6;--muted:#7c8fa9;--accent:#38bdf8;--accent-2:#8b5cf6}
   *{box-sizing:border-box;margin:0;padding:0}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  button:focus:not(:focus-visible){outline:none}
   html,body{height:100%}
   body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     background:var(--bg);color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased}
@@ -461,11 +463,13 @@
   .pal-item .del-badge{
     position:absolute;top:-6px;right:-6px;width:20px;height:20px;
     border-radius:50%;background:#ef4444;color:#fff;font-size:12px;font-weight:800;
-    border:2px solid #0c1728;cursor:pointer;display:none;
+    border:2px solid #0c1728;cursor:pointer;display:none;padding:0;
+    font-family:inherit;
     align-items:center;justify-content:center;line-height:1;
     box-shadow:0 2px 8px rgba(0,0,0,.5);z-index:2;transition:.15s}
   .pal-item.custom:hover .del-badge{display:flex}
   .pal-item .del-badge:hover{background:#b91c1c;transform:scale(1.15)}
+  .pal-item:focus-visible .del-badge{display:flex}
   .pal-item.custom{cursor:pointer}
   /* Сместить звёздочку влево, чтобы не мешала крестику */
   .pal-item.custom::before{top:4px;right:auto;left:4px}
@@ -528,27 +532,72 @@
 .mp-peer .role.host{background:#4c1d95;color:#e9d5ff}
 .mp-peer .role.guest{background:#0a1e28;color:#7dd3fc}
 .mp-peer .role.me{background:#0891b2;color:#fff}
+@media(max-width:760px){
+  body{overflow:auto}
+  #app{height:auto;min-height:100vh;min-height:100dvh;grid-template-rows:auto auto}
+  #topbar{position:sticky;top:0;height:auto;min-height:54px;overflow:visible;
+    flex-wrap:wrap;padding:8px;align-content:center}
+  #topbar .spacer{display:none}
+  #main{height:auto;overflow:visible;grid-template-columns:minmax(0,1fr);
+    grid-template-rows:minmax(220px,32vh) minmax(280px,52vh) minmax(220px,32vh)}
+  #main.playing{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(65vh,1fr)}
+  #palette{border-right:0;border-bottom:1px solid var(--border)}
+  #inspector{border-left:0;border-top:1px solid var(--border)}
+  #blocks{left:0;bottom:0;width:100vw;height:min(60vh,480px);min-width:0;min-height:180px;
+    border-radius:12px 12px 0 0}
+  #blocklyDiv .blocklyToolboxDiv{min-width:140px!important;max-width:140px!important}
+  .modeler-modal{padding:8px}
+  .modeler-panel{max-height:100%;border-radius:12px}
+  .modeler-head{flex-wrap:wrap;padding:10px;gap:8px}
+  .modeler-head h2{font-size:14px}
+  .modeler-head #modelerName{min-width:120px}
+  .modeler-body{overflow-y:auto;grid-template-columns:minmax(0,1fr);
+    grid-template-rows:minmax(120px,20vh) minmax(220px,40vh) minmax(140px,24vh)}
+  .modeler-left{border-right:0;border-bottom:1px solid var(--border)}
+  .modeler-right{border-left:0;border-top:1px solid var(--border)}
+  .modeler-hint{max-width:calc(100% - 24px);font-size:10px}
+  .games-modal,.mp-modal{padding:8px}
+  .games-panel,.mp-panel{max-height:96vh;border-radius:12px}
+  .games-head{flex-wrap:wrap;padding:12px}
+  .games-head .sub{order:3;width:100%}
+  .games-body,.mp-body{padding:14px}
+  .games-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr))}
+  .modal{padding:12px}
+  .modal-content{max-width:100%;padding:22px 18px}
+  .modal-buttons{flex-wrap:wrap}
+}
+@media(max-width:420px){
+  #topbar{gap:5px;padding:8px}
+  .tabs,.dim-tab{gap:2px}
+  .tab,.dim-btn{padding:6px 9px;font-size:11px}
+  .score-hud{padding:5px 8px}
+  .view-hud,.inv-hud,.zoom-hud{right:8px}
+  .vp-hint{left:8px;bottom:8px;max-width:calc(100% - 16px);font-size:10px}
+  .modeler-head .spacer{display:none}
+  .modeler-head #modelerName{order:3;max-width:none;flex:1}
+  .modeler-head button{font-size:11px;padding:6px 8px}
+}
 </style>
 </head>
 <body>
 <div id="app">
-  <header id="topbar">
+  <header id="topbar" aria-label="Панель редактора">
     <div class="logo"><span class="logo-mark">◈</span> VolVoxGameDev <span class="badge" id="modeBadge">3D</span></div>
     <div class="tabs">
-      <button class="tab active" data-mode="build">🔨 Конструирование</button>
-      <button class="tab" data-mode="play">▶ Играть</button>
+      <button class="tab active" data-mode="build" aria-pressed="true">🔨 Конструирование</button>
+      <button class="tab" data-mode="play" aria-pressed="false">▶ Играть</button>
     </div>
     <div class="dim-tab">
-      <button class="dim-btn active" data-dim="3d">🎲 3D</button>
-      <button class="dim-btn" data-dim="2d">📐 2D</button>
+      <button class="dim-btn active" data-dim="3d" aria-pressed="true">🎲 3D</button>
+      <button class="dim-btn" data-dim="2d" aria-pressed="false">📐 2D</button>
     </div>
     <div class="spacer"></div>
     <div class="score-hud" id="scoreHud">❤️ <span id="scoreVal">0</span></div>
     <div class="timer-hud" id="timerHud">⏱ <span id="timerVal">00:00.00</span></div>
-    <button class="btn icon" id="btnToggleBlocks" title="Скрыть/показать панель логики">🧩</button>
-    <button class="btn icon" id="btnSettings" title="Настройки">⚙</button>
-    <button class="btn" id="btnSave" title="Сохранить проект в JSON">💾</button>
-    <button class="btn" id="btnLoad" title="Загрузить проект из JSON">📂</button>
+    <button class="btn icon" id="btnToggleBlocks" title="Скрыть/показать панель логики" aria-label="Скрыть или показать панель логики">🧩</button>
+    <button class="btn icon" id="btnSettings" title="Настройки" aria-label="Настройки">⚙</button>
+    <button class="btn" id="btnSave" title="Сохранить проект в JSON" aria-label="Сохранить проект">💾</button>
+    <button class="btn" id="btnLoad" title="Загрузить проект из JSON" aria-label="Загрузить проект">📂</button>
     <input type="file" id="fileLoad" accept=".json,application/json" style="display:none">
     <button class="btn modeler" id="btnModeler" title="3D-моделлер">🎨 Моделлер</button>
     <button class="btn games" id="btnGames">🎮 Примеры</button>
@@ -558,8 +607,8 @@
     <button class="btn transfer" id="btnTo3D">→ 3D</button>
     <button class="btn" id="btnClear">Очистить</button>
   </header>
-  <div id="main">
-    <aside id="palette">
+  <main id="main">
+    <aside id="palette" aria-label="Библиотека объектов и список сцены">
       <div class="panel-title">Библиотека <span class="count" id="palCount">0</span></div>
       <div class="pal-grid" id="palGrid"></div>
       <div class="panel-title">Объекты <span class="count" id="objCount">0</span></div>
@@ -573,19 +622,19 @@
       <div class="drag-badge" id="dragBadge">🖱</div>
       <div class="zoom-hud" id="zoomHud">
         <div class="zoom-pill">
-          <button id="zoomOutBtn">−</button>
+          <button id="zoomOutBtn" aria-label="Уменьшить масштаб">−</button>
           <span><span class="lbl">ZOOM</span> <span id="zoomVal">100%</span></span>
-          <button id="zoomInBtn">+</button>
-          <button id="zoomResetBtn" style="width:auto;padding:0 8px;font-size:10px">⤾</button>
+          <button id="zoomInBtn" aria-label="Увеличить масштаб">+</button>
+          <button id="zoomResetBtn" aria-label="Сбросить масштаб" style="width:auto;padding:0 8px;font-size:10px">⤾</button>
         </div>
       </div>
       <div class="weapon-hud"><span class="dot"></span> 🔫 БЛАСТЕР · ЛКМ — огонь</div>
       <div class="timer-big" id="timerBig"><span class="lbl">ВРЕМЯ</span><span id="timerBigVal">00:00.00</span></div>
       <div class="view-hud">
-        <button class="view-btn" id="viewBtn"><span id="viewBtnLabel">👁 3-е лицо</span><span class="k">V</span></button>
+        <button class="view-btn" id="viewBtn" aria-pressed="false"><span id="viewBtnLabel">👁 3-е лицо</span><span class="k">V</span></button>
       </div>
       <div class="inv-hud">
-        <button class="inv-btn on" id="invBtn"><span id="invBtnLabel">🔄 Мышь X: инверт.</span><span class="k">I</span></button>
+        <button class="inv-btn on" id="invBtn" aria-pressed="true"><span id="invBtnLabel">🔄 Мышь X: инверт.</span><span class="k">I</span></button>
       </div>
       <div class="vp-hint" id="vpHint"></div>
       <div class="play-help" id="playHelp">Кликните для захвата мыши</div>
@@ -611,9 +660,9 @@
           </div>
         </div>
       </div>
-      <div class="modal" id="settingsModal">
+      <div class="modal" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
         <div class="modal-content">
-          <h2>⚙ Настройки</h2>
+          <h2 id="settingsTitle">⚙ Настройки</h2>
           <p style="text-align:center;color:#7c8fa9;font-size:12px;margin-bottom:18px">
             Сохраняются в браузере автоматически
           </p>
@@ -643,7 +692,7 @@
         </div>
       </div>
     </div>
-    <aside id="inspector">
+    <aside id="inspector" aria-label="Свойства выбранного объекта">
       <div class="panel-title">Свойства объекта</div>
       <div id="inspectorBody"></div>
     </aside>
@@ -656,28 +705,28 @@
     <button class="btn" id="btnBlocksExample">💡 Пример</button>
     <button class="btn" id="btnBlocksXml">💾 XML</button>
     <button class="btn danger" id="btnBlocksClear">🗑 Очистить</button>
-    <button class="btn" id="btnBlocksExpand" title="Развернуть панель логики (Shift+F)">⛶</button>
-    <button class="btn" id="btnBlocksClose" title="Закрыть (Esc)">✕</button>
+    <button class="btn" id="btnBlocksExpand" title="Развернуть панель логики (Shift+F)" aria-label="Развернуть панель логики">⛶</button>
+    <button class="btn" id="btnBlocksClose" title="Закрыть (Esc)" aria-label="Закрыть панель логики">✕</button>
   </div>
   <div id="blocklyDiv"></div>
   <div class="blocks-resize" id="blocksResize"></div>
 </section>
-</div>
+</main>
 
-<div class="mp-modal" id="mpModal">
+<div class="mp-modal" id="mpModal" role="dialog" aria-modal="true" aria-labelledby="mpTitle">
   <div class="mp-panel">
     <div class="mp-head">
-      <h2><span>🌐</span> Мультиплеер</h2>
+      <h2 id="mpTitle"><span>🌐</span> Мультиплеер</h2>
       <div style="flex:1"></div>
       <button class="btn" id="btnMpClose">✕ Закрыть</button>
     </div>
     <div class="mp-body" id="mpBody"></div>
   </div>
 </div>
-  <div class="games-modal" id="gamesModal">
+  <div class="games-modal" id="gamesModal" role="dialog" aria-modal="true" aria-labelledby="gamesTitle">
   <div class="games-panel">
     <div class="games-head">
-      <h2><span>🕹️</span> Легендарные игры</h2>
+      <h2 id="gamesTitle"><span>🕹️</span> Легендарные игры</h2>
       <div class="sub">Один уровень каждой классики с готовыми блоками</div>
       <div style="flex:1"></div>
       <button class="edit-pill" id="btnEditToggle">🔒 Редактировать</button>
@@ -691,10 +740,10 @@
   </div>
 </div>
   <!-- ============ 3D MODELER MODAL ============ -->
-<div class="modeler-modal" id="modelerModal">
+<div class="modeler-modal" id="modelerModal" role="dialog" aria-modal="true" aria-labelledby="modelerTitle">
   <div class="modeler-panel">
     <div class="modeler-head">
-      <h2><span>🎨</span> 3D-моделлер</h2>
+      <h2 id="modelerTitle"><span>🎨</span> 3D-моделлер</h2>
       <input id="modelerName" placeholder="Имя модели (например, «Кот»)…" maxlength="24">
       <div style="flex:1"></div>
       <button class="btn" id="btnModelerNew" title="Новая модель">🆕</button>
@@ -2498,6 +2547,23 @@ document.addEventListener('mouseup', e => { if(e.button === 0) mouseDown = false
 window.addEventListener('blur', () => { for(const k in keys) keys[k] = false; mouseDown = false; });
 
 /* ========== ПАЛИТРА UI ========== */
+function makeKeyboardControl(el, role, label, stateAttribute, state){
+  el.setAttribute('role', role);
+  el.tabIndex = 0;
+  el.dataset.keyboardActivation = '';
+  if(label) el.setAttribute('aria-label', label);
+  if(stateAttribute) el.setAttribute(stateAttribute, String(state));
+}
+function setSwitchState(el, checked){
+  el.classList.toggle('on', checked);
+  el.setAttribute('aria-checked', String(checked));
+}
+document.addEventListener('keydown', e => {
+  if((e.key !== 'Enter' && e.key !== ' ') || !e.target.matches || !e.target.matches('[data-keyboard-activation]')) return;
+  e.preventDefault();
+  e.target.click();
+});
+
 function renderPalette(){
   const palGrid = $('palGrid');
   palGrid.innerHTML = '';
@@ -2508,12 +2574,15 @@ function renderPalette(){
       + (p.mountain ? ' mountain' : '') + (p.plant ? ' plant' : '') + (p.build ? ' build' : '')
       + (p.custom ? ' custom' : '');
         el.className = 'pal-item' + extraCls;
+    makeKeyboardControl(el, 'button', p.name);
     el.innerHTML = `<div class="ico">${p.icon}</div><div class="lbl">${p.name}</div>`;
     if(p.custom){
-      const delBtn = document.createElement('div');
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
       delBtn.className = 'del-badge';
       delBtn.textContent = '×';
       delBtn.title = 'Удалить модель';
+      delBtn.setAttribute('aria-label', 'Удалить модель ' + p.name);
       delBtn.onclick = (e) => {
         e.stopPropagation();
         e.preventDefault();
@@ -2546,6 +2615,7 @@ function refreshSceneList(){
     if(o.userData.isCloud) cls += ' cloud';
     if(o.userData.isMountain) cls += ' mountain';
     li.className = cls;
+    makeKeyboardControl(li, 'button', 'Выбрать объект: ' + o.userData.label, 'aria-pressed', o === selected);
     let tag = '';
     if(t === 'enemy') tag = `<span class="tag enemy-tag">HP ${o.userData.hp ?? 1}</span>`;
     else if(o.userData.isFinish) tag = '<span class="tag finish-tag">ФИНИШ</span>';
@@ -2665,6 +2735,12 @@ function renderInspector(){
       </div>`;
     }
     inspBody.innerHTML = html;
+    inspBody.querySelectorAll('.switch').forEach(sw => {
+      const label = sw.id === 'swSolid' ? 'Столкновения'
+        : sw.id === 'swInvuln' ? 'Неуязвимость'
+        : sw.closest('.solid-switch').querySelector('.txt b').textContent;
+      makeKeyboardControl(sw, 'switch', label, 'aria-checked', sw.classList.contains('on'));
+    });
     if(dimension === '2d' && mode === 'build'){
       const ugRange = inspBody.querySelector('input[type=range][data-p="ugDepth"]');
       const ugNum = inspBody.querySelector('input[type=number][data-p="ugDepth"]');
@@ -2696,6 +2772,7 @@ function renderInspector(){
           const chip = document.createElement('div');
           chip.className = 'tex-chip' + (t === undergroundSettings.texture ? ' active' : '');
           chip.title = t;
+          makeKeyboardControl(chip, 'button', 'Текстура: ' + t, 'aria-pressed', t === undergroundSettings.texture);
           if(t === 'none') chip.innerHTML = '<span class="no-tex">∅</span>';
           else chip.appendChild(makeTextureThumb(t));
           chip.onclick = () => { undergroundSettings.texture = t; updateUnderground(); renderInspector(); };
@@ -2705,6 +2782,7 @@ function renderInspector(){
           const key = 'user:' + id;
           const chip = document.createElement('div');
           chip.className = 'tex-chip' + (key === undergroundSettings.texture ? ' active' : '');
+          makeKeyboardControl(chip, 'button', 'Пользовательская текстура', 'aria-pressed', key === undergroundSettings.texture);
           const img = document.createElement('img');
           img.src = userTextures[id].image.src;
           chip.appendChild(img);
@@ -2869,6 +2947,7 @@ function renderInspector(){
       const chip = document.createElement('div');
       chip.className = 'tex-chip' + (t === curTex ? ' active' : '');
       chip.title = t;
+      makeKeyboardControl(chip, 'button', 'Текстура: ' + t, 'aria-pressed', t === curTex);
       if(t === 'none') chip.innerHTML = '<span class="no-tex">∅</span>';
       else chip.appendChild(makeTextureThumb(t));
       chip.onclick = () => { applyTextureToObject(selected, t); renderInspector(); };
@@ -2878,6 +2957,7 @@ function renderInspector(){
       const key = 'user:' + id;
       const chip = document.createElement('div');
       chip.className = 'tex-chip' + (key === curTex ? ' active' : '');
+      makeKeyboardControl(chip, 'button', 'Пользовательская текстура', 'aria-pressed', key === curTex);
       const img = document.createElement('img');
       img.src = userTextures[id].image.src;
       chip.appendChild(img);
@@ -2910,6 +2990,7 @@ function renderInspector(){
     const chip = document.createElement('div');
     chip.className = 'bg-chip' + (id === currentBg ? ' active' : '');
     chip.dataset.bg = id; chip.title = bg.name;
+    makeKeyboardControl(chip, 'button', 'Фон: ' + bg.name, 'aria-pressed', id === currentBg);
     chip.style.background = `linear-gradient(180deg, ${bg.top}, ${bg.bot})`;
     chip.onclick = () => { applyBackground(id); renderInspector(); };
     bgGrid.appendChild(chip);
@@ -2924,10 +3005,15 @@ function renderInspector(){
     };
   });
   inspBody.querySelectorAll('.sw').forEach(sw => {
+    makeKeyboardControl(sw, 'button', 'Цвет ' + sw.dataset.c, 'aria-pressed', sw.classList.contains('active'));
     sw.onclick = () => {
       setColor(selected, sw.dataset.c);
-      inspBody.querySelectorAll('.sw').forEach(x => x.classList.remove('active'));
+      inspBody.querySelectorAll('.sw').forEach(x => {
+        x.classList.remove('active');
+        x.setAttribute('aria-pressed', 'false');
+      });
       sw.classList.add('active');
+      sw.setAttribute('aria-pressed', 'true');
     };
   });
   const swSolid = $('swSolid');
@@ -3034,13 +3120,18 @@ const viewBtnLabel = $('viewBtnLabel');
 function setViewMode(v){
   viewMode = v;
   mainEl.classList.toggle('first-person', v === 'first');
+  $('viewBtn').setAttribute('aria-pressed', String(v === 'first'));
   viewBtnLabel.textContent = v === 'first' ? '👁 1-е лицо' : '👁 3-е лицо';
   const p = objects.find(isPlayer);
   if(p) p.visible = (v !== 'first' && !p.userData.dead);
 }
 $('viewBtn').onclick = () => setViewMode(viewMode === 'first' ? 'third' : 'first');
 const invBtn = $('invBtn'), invBtnLabel = $('invBtnLabel');
-function updateInvBtn(){ invBtnLabel.textContent = invertMouseX ? '🔄 Мышь X: инверт.' : '🔄 Мышь X: норм.'; invBtn.classList.toggle('on', invertMouseX); }
+function updateInvBtn(){
+  invBtnLabel.textContent = invertMouseX ? '🔄 Мышь X: инверт.' : '🔄 Мышь X: норм.';
+  invBtn.classList.toggle('on', invertMouseX);
+  invBtn.setAttribute('aria-pressed', String(invertMouseX));
+}
 invBtn.onclick = () => { invertMouseX = !invertMouseX;
   try{ localStorage.setItem('vvg_invx', invertMouseX ? '1' : '0'); }catch(_){}
   updateInvBtn(); };
@@ -3052,7 +3143,11 @@ function setDimension(d){
   if(wasPlaying) setMode('build');
   dimension = d;
   objects = objectsByDim[d];
-  document.querySelectorAll('.dim-btn').forEach(b => b.classList.toggle('active', b.dataset.dim === d));
+  document.querySelectorAll('.dim-btn').forEach(b => {
+    const active = b.dataset.dim === d;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-pressed', String(active));
+  });
   mainEl.classList.toggle('dim2d', d === '2d');
   modeBadge.textContent = d === '2d' ? '2D' : '3D';
   ground.visible = (d === '3d'); grid.visible = (d === '3d');
@@ -3155,7 +3250,11 @@ function setMode(m){
   if(m === mode) return;
   if(mode === 'build' && blocklyWs) saveSelectedXml();
   mode = m;
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
+  document.querySelectorAll('.tab').forEach(t => {
+    const active = t.dataset.mode === m;
+    t.classList.toggle('active', active);
+    t.setAttribute('aria-pressed', String(active));
+  });
   mainEl.classList.toggle('playing', m === 'play');
     if(m === 'play'){
     closeBlocksPanel();
@@ -4117,13 +4216,19 @@ $('btnSettings').onclick = () => {
   const range = modal.querySelector('input[type=range][data-p="sens"]');
   const num = modal.querySelector('input[type=number][data-p="sens"]');
   range.value = sensVal; num.value = sensVal;
-  $('swInvX').classList.toggle('on', invertMouseX);
-  $('swInvY').classList.toggle('on', invertMouseY);
-  $('swSnap').classList.toggle('on', SNAP_TO_GRID);
+  setSwitchState($('swInvX'), invertMouseX);
+  setSwitchState($('swInvY'), invertMouseY);
+  setSwitchState($('swSnap'), SNAP_TO_GRID);
 };
 $('btnSettingsClose').onclick = () => $('settingsModal').classList.remove('active');
 {
   const modal = $('settingsModal');
+  [['swInvX', 'Инвертировать X', invertMouseX],
+    ['swInvY', 'Инвертировать Y', invertMouseY],
+    ['swSnap', 'Примагничивание к сетке', SNAP_TO_GRID]].forEach(([id, label, checked]) => {
+      const sw = $(id);
+      makeKeyboardControl(sw, 'switch', label, 'aria-checked', checked);
+    });
   const range = modal.querySelector('input[type=range][data-p="sens"]');
   const num = modal.querySelector('input[type=number][data-p="sens"]');
   const applySens = (v) => {
@@ -4146,17 +4251,17 @@ $('btnSettingsClose').onclick = () => $('settingsModal').classList.remove('activ
   $('swInvX').onclick = () => {
     invertMouseX = !invertMouseX;
     try{ localStorage.setItem('vvg_invx', invertMouseX ? '1' : '0'); }catch(_){}
-    $('swInvX').classList.toggle('on', invertMouseX); updateInvBtn();
+    setSwitchState($('swInvX'), invertMouseX); updateInvBtn();
   };
   $('swInvY').onclick = () => {
     invertMouseY = !invertMouseY;
     try{ localStorage.setItem('vvg_invy', invertMouseY ? '1' : '0'); }catch(_){}
-    $('swInvY').classList.toggle('on', invertMouseY);
+    setSwitchState($('swInvY'), invertMouseY);
   };
   $('swSnap').onclick = () => {
     SNAP_TO_GRID = !SNAP_TO_GRID;
     try{ localStorage.setItem('vvg_snap', SNAP_TO_GRID ? '1' : '0'); }catch(_){}
-    $('swSnap').classList.toggle('on', SNAP_TO_GRID);
+    setSwitchState($('swSnap'), SNAP_TO_GRID);
     toast(SNAP_TO_GRID ? '🧲 Сетка включена' : '🧲 Сетка выключена');
   };
 }
@@ -4401,6 +4506,7 @@ function renderGamesGrid(){
   EXAMPLES.forEach(ex => {
     const card = document.createElement('div');
     card.className = 'game-card';
+    makeKeyboardControl(card, 'button', ex.name);
     card.innerHTML = `
       <div class="prog-badge">🧩 блоки</div>
       <div class="thumb">${ex.icon}</div>
@@ -5191,6 +5297,7 @@ function renderModelerPrimitives(){
   MODELER_PRIMITIVES.forEach(p => {
     const el = document.createElement('div');
     el.className = 'prim-item';
+    makeKeyboardControl(el, 'button', p.name);
     el.innerHTML = `<div class="ico">${p.icon}</div><div class="lbl">${p.name}</div>`;
     el.onclick = () => addModelerPart(p.id);
     grid.appendChild(el);
@@ -5256,6 +5363,7 @@ function renderModelerParts(){
   mParts.forEach(p => {
     const li = document.createElement('li');
     li.className = 'part-item' + (p.mesh === mSelected ? ' active' : '');
+    makeKeyboardControl(li, 'button', p.name, 'aria-pressed', p.mesh === mSelected);
     const col = '#' + p.mesh.material.color.getHexString();
     li.innerHTML = `
       <span class="dot" style="background:${col}"></span>
@@ -5370,13 +5478,18 @@ function renderModelerInspector(){
   });
 
   insp.querySelectorAll('.mcolor').forEach(el => {
-    el.onclick = () => {
-      const c = el.dataset.c;
-      m.material.color.set(c);
-      insp.querySelectorAll('.mcolor').forEach(x => x.classList.remove('active'));
-      el.classList.add('active');
-      renderModelerParts();
-    };
+  makeKeyboardControl(el, 'button', 'Цвет ' + el.dataset.c, 'aria-pressed', el.classList.contains('active'));
+  el.onclick = () => {
+    const c = el.dataset.c;
+    m.material.color.set(c);
+    insp.querySelectorAll('.mcolor').forEach(x => {
+      x.classList.remove('active');
+      x.setAttribute('aria-pressed', 'false');
+    });
+    el.classList.add('active');
+    el.setAttribute('aria-pressed', 'true');
+    renderModelerParts();
+  };
   });
 
   $('modelerDelPart').onclick = () => removeModelerPart(m);

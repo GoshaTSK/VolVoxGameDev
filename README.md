@@ -14,6 +14,12 @@ python -m http.server 8000
 Open <http://localhost:8000/> in a browser. Opening `index.html` directly as a
 `file://` URL is not supported because the app uses JavaScript modules.
 
+## Narrow screens and keyboard use
+
+On narrow screens, the editor panels stack vertically and the page can scroll.
+Palette items, scene objects, modeler parts, and custom switches can be focused
+with Tab and activated with Enter or Space.
+
 ## Save and recover projects
 
 Use the disk and folder buttons in the top toolbar to export a project as JSON
