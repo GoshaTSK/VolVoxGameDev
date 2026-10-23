@@ -93,26 +93,34 @@ test('editor page and local workflow modules are served over HTTP', async () => 
 
   const page = await pageResponse.text();
   assert.match(page, /<main id="main">/);
-  assert.match(page, /<div class="toolbar-primary">[\s\S]*?<div class="toolbar-center">[\s\S]*?<div class="toolbar-actions">/);
-  assert.match(page, /id="btnSave"/);
-  assert.match(page, /id="btnLoad"/);
+  assert.match(page, /<div class="toolbar-primary">[\s\S]*?<div class="toolbar-center">[\s\S]*?<details class="toolbar-overflow" id="toolbarOverflow">/);
+  assert.match(page, /<summary class="toolbar-overflow-summary" aria-label="Ещё действия"/);
+  assert.match(page, /<div class="toolbar-overflow-content">[\s\S]*<div class="toolbar-actions" role="group" aria-label="Проект и настройки">[\s\S]*id="btnSave"[\s\S]*id="btnLoad"[\s\S]*id="btnSettings"[\s\S]*<div class="toolbar-group toolbar-tools" role="group" aria-label="Инструменты">/);
   assert.match(page, /id="fileLoad"/);
   assert.match(page, /id="projectStatus" role="status" aria-live="polite" aria-atomic="true"[^>]*title="Автосохранение запускается…" tabindex="0"/);
   assert.match(page, /<div class="toolbar-group" role="group" aria-label="Режим редактора">[\s\S]*data-mode="build"[\s\S]*data-mode="play"/);
+  assert.match(page, /data-mode="build" aria-label="Конструирование" title="Конструирование"/);
+  assert.match(page, /class="mode-label-short">Строить/);
   assert.match(page, /<div class="toolbar-group" role="group" aria-label="Размерность сцены">[\s\S]*data-dim="3d"[\s\S]*data-dim="2d"/);
   assert.equal([...page.matchAll(/class="dim-btn/g)].length, 2, 'there is exactly one 2D/3D view toggle');
-  const tools = page.match(/<div class="toolbar-group toolbar-tools" role="group" aria-label="Инструменты">([\s\S]*?)<\/div>\s*<\/header>/)?.[1];
-  assert.ok(tools, 'tools are in the second toolbar row');
+  const tools = page.match(/<div class="toolbar-group toolbar-tools" role="group" aria-label="Инструменты">([\s\S]*?)<\/div>/)?.[1];
+  assert.ok(tools, 'tools are present in the inline group and overflow menu');
   assert.match(tools, /id="btnToggleBlocks"[\s\S]*id="btnModeler"[\s\S]*id="btnGames"[\s\S]*id="btnMultiplayer"[\s\S]*id="btnGuide"[\s\S]*id="btnTo2D"[\s\S]*id="btnTo3D"[\s\S]*id="btnClear"/);
   assert.match(page, /id="btnSettings"[^>]*aria-label="Настройки"/);
   assert.match(page, /id="btnSave"[^>]*aria-label="Сохранить проект"/);
   assert.match(page, /id="btnLoad"[^>]*aria-label="Загрузить проект"/);
+  for (const id of ['btnSave', 'btnLoad', 'btnSettings', 'btnToggleBlocks', 'btnModeler', 'btnGames', 'btnMultiplayer', 'btnGuide', 'btnTo2D', 'btnTo3D', 'btnClear']) {
+    assert.equal([...page.matchAll(new RegExp(`id="${id}"`, 'g'))].length, 1, `${id} exists once`);
+  }
   assert.match(page, /#app\{display:grid;grid-template-rows:auto minmax\(0,1fr\);height:100vh;min-height:0\}/);
-  assert.match(page, /#topbar\{display:flex;flex-direction:column;[^}]*backdrop-filter:blur\(24px\)/);
-  assert.match(page, /\.toolbar-primary\{display:flex;align-items:center;[^}]*min-height:44px/);
-  assert.match(page, /\.toolbar-tools\{display:flex;align-items:center;gap:4px;flex-wrap:wrap/);
-  assert.match(page, /@media\(max-width:760px\)\{[\s\S]*?\.toolbar-primary\{flex-wrap:wrap/);
-  assert.match(page, /@media\(max-width:420px\)\{[\s\S]*?\.toolbar-tools\{gap:1px\}/);
+  assert.match(page, /#topbar\{position:relative;display:flex;align-items:center;[^}]*backdrop-filter:blur\(24px\)/);
+  assert.match(page, /\.toolbar-primary\{display:flex;align-items:center;[^}]*flex-wrap:nowrap/);
+  assert.match(page, /@media\(max-width:1480px\)\{[\s\S]*?\.toolbar-overflow-summary\{display:flex/);
+  assert.match(page, /@media\(max-width:380px\)\{[\s\S]*?\.mode-label-short\{display:inline\}/);
+  assert.match(page, /\.toolbar-overflow\[open\] \.toolbar-overflow-content\{display:flex;flex-direction:column\}/);
+  assert.match(page, /event\.key === 'Escape' && toolbarOverflow\.open/);
+  assert.doesNotMatch(page, /toolbar-primary\{flex-wrap:wrap/);
+  assert.doesNotMatch(page, /toolbar-tools\{flex:1 1 100%/);
   assert.match(page, /tools\.insertBefore\(openBtn, clearBtn\)/);
   assert.match(page, /class="tool-btn danger-tool" id="btnClear"/);
   assert.match(page, /setProjectStatus\(`Автосохранено/);

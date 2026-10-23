@@ -15,20 +15,21 @@
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
     background:var(--bg);color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased}
   #app{display:grid;grid-template-rows:auto minmax(0,1fr);height:100vh;min-height:0}
-  #topbar{display:flex;flex-direction:column;gap:0;padding:5px 16px 0;
+  #topbar{position:relative;display:flex;align-items:center;padding:5px 16px;
     background:var(--glass);border-bottom:1px solid rgba(255,255,255,.09);z-index:10;
     backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);
     overflow:visible}
-  .toolbar-primary{display:flex;align-items:center;gap:12px;min-height:44px;width:100%;min-width:0}
-  .toolbar-center{display:flex;align-items:center;justify-content:center;gap:10px;flex:1;min-width:0}
+  .toolbar-primary{display:flex;align-items:center;gap:10px;min-height:42px;width:100%;min-width:0;flex-wrap:nowrap}
+  .toolbar-center{display:flex;align-items:center;justify-content:center;gap:8px;flex:1;min-width:0}
   .toolbar-actions{display:flex;align-items:center;gap:6px;flex:none}
   .toolbar-group{display:flex;align-items:center;gap:7px;min-width:0;flex:none}
   .toolbar-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   .toolbar-group .tabs,.toolbar-group .dim-tab{flex:none}
   .toolbar-project{gap:5px}
-  .toolbar-tools{display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex:1 1 auto;
-    border-top:1px solid rgba(255,255,255,.07);padding:5px 0 6px;min-width:0}
-  #topbar .spacer{flex:1}
+  .toolbar-overflow{display:contents}
+  .toolbar-overflow-summary{display:none}
+  .toolbar-overflow-content{display:contents}
+  .toolbar-tools{display:flex;align-items:center;gap:2px;flex:none;min-width:0}
   /* ==== GUIDE PANEL ==== */
    .logo{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;
     font-weight:800;font-size:18px;white-space:nowrap;text-decoration:none}
@@ -40,6 +41,7 @@
   .tab{border:0;background:transparent;color:var(--muted);font:inherit;font-weight:600;font-size:12px;
     padding:6px 12px;border-radius:6px;cursor:pointer;transition:.15s;white-space:nowrap}
   .tab:hover{color:var(--text)}
+  .mode-label-short{display:none}
   .tab.active{background:#2a2b31;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.35)}
   .tab.active[data-mode="play"]{background:#2a2b31}
   .dim-tab{display:flex;gap:2px;background:#101115;padding:3px;border-radius:9px;border:1px solid #303137;flex:none}
@@ -64,7 +66,7 @@
     background:transparent;color:#d1d1d6;font:inherit;font-size:17px;cursor:pointer;transition:.15s;flex:none}
   .toolbar-icon:hover,.tool-btn:hover{background:rgba(255,255,255,.08);color:#0a84ff}
   .tool-btn{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:0;border-radius:7px;
-    background:transparent;color:#c7c7cc;font:inherit;font-size:11.5px;font-weight:600;white-space:nowrap;
+    background:transparent;color:#c7c7cc;font:inherit;font-size:11px;font-weight:600;white-space:nowrap;
     cursor:pointer;transition:.15s;flex:none}
   .tool-btn .tool-glyph{width:15px;color:#9b9ba1;font-size:14px;text-align:center}
   .tool-btn:hover .tool-glyph{color:#0a84ff}
@@ -83,6 +85,10 @@
   .project-status[data-state="error"]{color:#ff453a;border:0;background:transparent}
   .project-status[data-state="saved"]::before,.project-status[data-state="pending"]::before,
   .project-status[data-state="error"]::before{color:inherit}
+  .toolbar-overflow-summary{list-style:none;width:34px;height:34px;align-items:center;justify-content:center;
+    border:1px solid #37383f;border-radius:8px;background:#202126;color:#e5e5ea;font-size:18px;cursor:pointer}
+  .toolbar-overflow-summary::-webkit-details-marker{display:none}
+  .toolbar-overflow-summary:hover,.toolbar-overflow[open]>.toolbar-overflow-summary{background:#2d2e35;color:#0a84ff}
   .btn.icon.on{background:linear-gradient(135deg,#166534,#22c55e);border-color:#22c55e;color:#fff}
   #main{display:grid;grid-template-columns:252px 1fr 288px;overflow:hidden;min-height:0;height:100%}
   #main.playing{grid-template-columns:1fr}
@@ -567,21 +573,28 @@
 .mp-peer .role.me{background:#0891b2;color:#fff}
 @media(max-width:1100px){
   #topbar{padding-right:10px;padding-left:10px}
-  .toolbar-primary{gap:8px}
-  .toolbar-center{gap:6px}
-  .toolbar-tools{gap:2px}
   #main{height:100%}
+}
+@media(max-width:1480px){
+  .toolbar-overflow{display:block;position:relative;flex:none}
+  .toolbar-overflow-summary{display:flex;gap:4px;width:auto;min-width:36px;padding:0 9px}
+  .toolbar-overflow-content{display:none;position:absolute;top:calc(100% + 8px);right:0;
+    width:min(440px,calc(100vw - 20px));padding:8px;gap:6px;z-index:20;
+    background:rgba(25,26,30,.98);border:1px solid #3a3b42;border-radius:12px;
+    box-shadow:0 14px 36px rgba(0,0,0,.55);backdrop-filter:blur(24px)}
+  .toolbar-overflow[open] .toolbar-overflow-content{display:flex;flex-direction:column}
+  .toolbar-actions{padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.1)}
+  .toolbar-tools{flex-wrap:wrap}
 }
 @media(max-width:760px){
   body{overflow:auto}
   #app{height:auto;min-height:100vh;min-height:100dvh;grid-template-rows:auto auto}
-  #topbar{position:sticky;top:0;overflow:visible;padding:4px 8px 0}
-  .toolbar-primary{flex-wrap:wrap;gap:4px 8px}
-  .toolbar-center{order:3;flex:1 1 100%;justify-content:flex-start;padding:0 0 5px}
-  .toolbar-actions{margin-left:auto}
-  .toolbar-project{gap:2px}
-  .toolbar-tools{flex:1 1 100%;padding:5px 0 6px}
-  .tool-btn{padding:6px 7px}
+  #topbar{position:sticky;top:0;overflow:visible;padding:4px 8px}
+  .toolbar-primary{gap:5px}
+  .toolbar-center{justify-content:flex-start;gap:5px}
+  .toolbar-overflow-summary{width:34px;min-width:34px;padding:0}
+  .toolbar-more-label{display:none}
+  .tool-btn{padding:7px 8px}
   #main{height:auto;overflow:visible;grid-template-columns:minmax(0,1fr);
     grid-template-rows:minmax(220px,32vh) minmax(280px,52vh) minmax(220px,32vh)}
   #main.playing{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(65vh,1fr)}
@@ -612,19 +625,23 @@
 }
 @media(max-width:420px){
   #topbar{padding-right:6px;padding-left:6px}
-  .toolbar-primary{gap:3px 5px}
+  .toolbar-primary{gap:1px}
   .toolbar-center{gap:5px}
   .tabs,.dim-tab{gap:2px}
-  .tab,.dim-btn{padding:6px 8px;font-size:11px}
-  .score-hud{padding:5px}
-  .toolbar-tools{gap:1px}
-  .tool-btn{padding:6px 6px;font-size:11px}
-  .tool-btn .tool-glyph{width:13px}
+  .tab,.dim-btn{padding:6px 7px;font-size:10.5px}
+  .score-hud{padding:4px}
+  .toolbar-overflow-content{width:min(360px,calc(100vw - 32px))}
   .view-hud,.inv-hud,.zoom-hud{right:8px}
   .vp-hint{left:8px;bottom:8px;max-width:calc(100% - 16px);font-size:10px}
   .modeler-head .spacer{display:none}
   .modeler-head #modelerName{order:3;max-width:none;flex:1}
   .modeler-head button{font-size:11px;padding:6px 8px}
+}
+@media(max-width:380px){
+  .logo{display:none}
+  .tab{padding-right:4px;padding-left:4px}
+  .mode-label-full{display:none}
+  .mode-label-short{display:inline}
 }
 </style>
 </head>
@@ -639,7 +656,7 @@
         <div class="toolbar-group" role="group" aria-label="Режим редактора">
           <span class="toolbar-label">Режим</span>
           <div class="tabs">
-            <button class="tab active" data-mode="build" aria-pressed="true">Конструирование</button>
+            <button class="tab active" data-mode="build" aria-label="Конструирование" title="Конструирование" aria-pressed="true"><span class="mode-label-full">Конструирование</span><span class="mode-label-short">Строить</span></button>
             <button class="tab" data-mode="play" aria-pressed="false">Играть</button>
           </div>
         </div>
@@ -651,28 +668,35 @@
           </div>
         </div>
       </div>
-      <div class="toolbar-actions">
-        <div class="score-hud" id="scoreHud" aria-label="Очки" aria-live="polite">♥ <span id="scoreVal">0</span></div>
-        <div class="timer-hud" id="timerHud">⏱ <span id="timerVal">00:00.00</span></div>
-        <div class="toolbar-group toolbar-project" role="group" aria-label="Проект">
-          <span class="toolbar-label">Проект</span>
-          <button class="toolbar-icon" id="btnSave" title="Сохранить проект в JSON" aria-label="Сохранить проект">↓</button>
-          <button class="toolbar-icon" id="btnLoad" title="Загрузить проект из JSON" aria-label="Загрузить проект">▱</button>
-          <input type="file" id="fileLoad" accept=".json,application/json" style="display:none">
+      <div class="score-hud" id="scoreHud" aria-label="Очки" aria-live="polite">♥ <span id="scoreVal">0</span></div>
+      <div class="timer-hud" id="timerHud">⏱ <span id="timerVal">00:00.00</span></div>
+      <details class="toolbar-overflow" id="toolbarOverflow">
+        <summary class="toolbar-overflow-summary" aria-label="Ещё действия" title="Дополнительные действия">
+          <span aria-hidden="true">•••</span><span class="toolbar-more-label">Ещё</span>
+        </summary>
+        <div class="toolbar-overflow-content">
+          <div class="toolbar-actions" role="group" aria-label="Проект и настройки">
+            <div class="toolbar-group toolbar-project" role="group" aria-label="Проект">
+              <span class="toolbar-label">Проект</span>
+              <button class="toolbar-icon" id="btnSave" title="Сохранить проект в JSON" aria-label="Сохранить проект">↓</button>
+              <button class="toolbar-icon" id="btnLoad" title="Загрузить проект из JSON" aria-label="Загрузить проект">▱</button>
+              <input type="file" id="fileLoad" accept=".json,application/json" style="display:none">
+            </div>
+            <button class="toolbar-icon" id="btnSettings" title="Настройки" aria-label="Настройки">⚙</button>
+          </div>
+          <div class="toolbar-group toolbar-tools" role="group" aria-label="Инструменты">
+            <span class="toolbar-label">Инструменты</span>
+            <button class="tool-btn" id="btnToggleBlocks" title="Скрыть или показать панель логики" aria-label="Скрыть или показать панель логики"><span class="tool-glyph" aria-hidden="true">▦</span>Логика</button>
+            <button class="tool-btn" id="btnModeler" title="Открыть 3D-моделлер" aria-label="Открыть 3D-моделлер"><span class="tool-glyph" aria-hidden="true">◇</span>Моделлер</button>
+            <button class="tool-btn" id="btnGames" title="Открыть примеры игр" aria-label="Открыть примеры игр"><span class="tool-glyph" aria-hidden="true">▤</span>Примеры</button>
+            <button class="tool-btn" id="btnMultiplayer" title="Открыть мультиплеер" aria-label="Открыть мультиплеер"><span class="tool-glyph" aria-hidden="true">◎</span>Мультиплеер</button>
+            <button class="tool-btn" id="btnGuide" title="Открыть руководство" aria-label="Открыть руководство"><span class="tool-glyph" aria-hidden="true">?</span>Гайд</button>
+            <button class="tool-btn" id="btnTo2D" title="Перенести проект в 2D" aria-label="Перенести проект в 2D"><span class="tool-glyph" aria-hidden="true">⇢</span>Перенести в 2D</button>
+            <button class="tool-btn" id="btnTo3D" title="Перенести проект в 3D" aria-label="Перенести проект в 3D"><span class="tool-glyph" aria-hidden="true">⇢</span>Перенести в 3D</button>
+            <button class="tool-btn danger-tool" id="btnClear" title="Очистить текущую сцену" aria-label="Очистить текущую сцену"><span class="tool-glyph" aria-hidden="true">×</span>Очистить</button>
+          </div>
         </div>
-        <button class="toolbar-icon" id="btnSettings" title="Настройки" aria-label="Настройки">⚙</button>
-      </div>
-    </div>
-    <div class="toolbar-group toolbar-tools" role="group" aria-label="Инструменты">
-      <span class="toolbar-label">Инструменты</span>
-      <button class="tool-btn" id="btnToggleBlocks" title="Скрыть или показать панель логики" aria-label="Скрыть или показать панель логики"><span class="tool-glyph" aria-hidden="true">▦</span>Логика</button>
-      <button class="tool-btn" id="btnModeler" title="Открыть 3D-моделлер" aria-label="Открыть 3D-моделлер"><span class="tool-glyph" aria-hidden="true">◇</span>Моделлер</button>
-      <button class="tool-btn" id="btnGames" title="Открыть примеры игр" aria-label="Открыть примеры игр"><span class="tool-glyph" aria-hidden="true">▤</span>Примеры</button>
-      <button class="tool-btn" id="btnMultiplayer" title="Открыть мультиплеер" aria-label="Открыть мультиплеер"><span class="tool-glyph" aria-hidden="true">◎</span>Мультиплеер</button>
-      <button class="tool-btn" id="btnGuide" title="Открыть руководство" aria-label="Открыть руководство"><span class="tool-glyph" aria-hidden="true">?</span>Гайд</button>
-      <button class="tool-btn" id="btnTo2D" title="Перенести проект в 2D" aria-label="Перенести проект в 2D"><span class="tool-glyph" aria-hidden="true">⇢</span>Перенести в 2D</button>
-      <button class="tool-btn" id="btnTo3D" title="Перенести проект в 3D" aria-label="Перенести проект в 3D"><span class="tool-glyph" aria-hidden="true">⇢</span>Перенести в 3D</button>
-      <button class="tool-btn danger-tool" id="btnClear" title="Очистить текущую сцену" aria-label="Очистить текущую сцену"><span class="tool-glyph" aria-hidden="true">×</span>Очистить</button>
+      </details>
     </div>
   </header>
   <main id="main">
@@ -844,6 +868,24 @@
   </div>
 </div>
 
+<script>
+(() => {
+  const toolbarOverflow = document.getElementById('toolbarOverflow');
+  const toolbarOverflowSummary = toolbarOverflow.querySelector('summary');
+  toolbarOverflow.addEventListener('click', event => {
+    if(event.target.closest('button') && !event.target.closest('summary')) toolbarOverflow.open = false;
+  });
+  document.addEventListener('click', event => {
+    if(toolbarOverflow.open && !toolbarOverflow.contains(event.target)) toolbarOverflow.open = false;
+  });
+  document.addEventListener('keydown', event => {
+    if(event.key === 'Escape' && toolbarOverflow.open){
+      toolbarOverflow.open = false;
+      toolbarOverflowSummary.focus();
+    }
+  });
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/blockly@10.4.3/blockly.min.js"></script>
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script type="importmap">

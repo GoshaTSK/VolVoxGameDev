@@ -17,9 +17,10 @@ Open <http://localhost:8000/> in a browser. Opening `index.html` directly as a
 ## Narrow screens and keyboard use
 
 On narrow screens, the editor panels stack vertically and the page can scroll.
-The two toolbar rows wrap so the controls stay available without horizontal
-clipping. Palette items, scene objects, modeler parts, and custom switches can
-be focused with Tab and activated with Enter or Space.
+The toolbar stays in one row; secondary actions collapse into the “Ещё” menu
+when space is limited. Open it with Enter or Space, and close it with Escape.
+Palette items, scene objects, modeler parts, and custom switches can be focused
+with Tab and activated with Enter or Space.
 
 ## Save and recover projects
 
