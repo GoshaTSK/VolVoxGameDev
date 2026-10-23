@@ -739,6 +739,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { CURRENT_PROJECT_VERSION, validateAndNormalizeProject } from './project-format.mjs';
 
 const $ = id => document.getElementById(id);
 const viewport = $('viewport'), canvas = $('canvas'), mainEl = $('main');
@@ -3915,16 +3916,7 @@ function serializeObject(o){
   };
 }
 function saveProject(){
-  const data = {
-    version: 1,
-    app: 'VolVoxGameDev',
-    dimension,
-    background: currentBg,
-    underground: { depth: undergroundSettings.depth, texture: undergroundSettings.texture },
-    objects3d: objectsByDim['3d'].map(serializeObject),
-    objects2d: objectsByDim['2d'].map(serializeObject),
-    customModels: customModels,
-  };
+  const data = serializeProjectData();
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -3934,13 +3926,59 @@ function saveProject(){
   setTimeout(() => URL.revokeObjectURL(url), 500);
   toast('💾 Проект сохранён');
 }
+function serializeProjectData(){
+  return {
+    version: CURRENT_PROJECT_VERSION,
+    app: 'VolVoxGameDev',
+    dimension,
+    background: currentBg,
+    underground: { depth: undergroundSettings.depth, texture: undergroundSettings.texture },
+    objects3d: objectsByDim['3d'].map(serializeObject),
+    objects2d: objectsByDim['2d'].map(serializeObject),
+    customModels: serializeCustomModels(),
+  };
+}
+function serializeCustomModels(){
+  return Object.fromEntries(Object.entries(customModels).map(([id, model]) => [
+    id,
+    {
+      name: model.name,
+      parts: model.parts.map(({ type, pos, rot, scale, color, stlData, stlName }) => ({
+        type, pos, rot, scale, color, stlData, stlName,
+      })),
+    },
+  ]));
+}
 function loadProjectData(data){
-  if(!data || typeof data !== 'object'){ toast('❌ Неверный файл'); return; }
-    const _mpWasApplying = MP.applyingRemote;
+  data = validateAndNormalizeProject(data, {
+    objectTypes: PALETTE.map(item => item.type),
+    backgroundIds: Object.keys(BACKGROUNDS),
+  });
+  const _mpWasApplying = MP.applyingRemote;
   MP.applyingRemote = true;
   try{
-  if(data.app && data.app !== 'VolVoxGameDev' && !data.objects3d && !data.objects2d){
-    toast('❌ Неверный формат'); return;
+  // Restore model definitions first so custom object types can be instantiated.
+  if(data.customModels && typeof data.customModels === 'object'){
+    let added = 0;
+    for(const [id, model] of Object.entries(data.customModels)){
+      if(!customModels[id]){
+        customModels[id] = model;
+        added++;
+      }
+      if(!PALETTE.find(p => p.type === 'custom_' + id)){
+        PALETTE.push({
+          type: 'custom_' + id,
+          name: model.name,
+          icon: '★',
+          solid: true,
+          custom: true,
+        });
+      }
+    }
+    if(added > 0){
+      renderPalette();
+      saveCustomModelsToStorage();
+    }
   }
   for(const d of ['3d','2d']){
     const saved = objects;
@@ -3993,49 +4031,77 @@ function loadProjectData(data){
     if(selected) renderInspector();
   }
   ensureResize();
-    // Восстановить кастомные модели (merge — не удаляем существующие)
-  if(data.customModels && typeof data.customModels === 'object'){
-    let added = 0;
-    for(const id in data.customModels){
-      if(!customModels[id]){
-        customModels[id] = data.customModels[id];
-        added++;
-      }
-      if(!PALETTE.find(p => p.type === 'custom_' + id)){
-        PALETTE.push({
-          type: 'custom_' + id,
-          name: data.customModels[id].name,
-          icon: '★',
-          solid: true,
-          custom: true,
-        });
-      }
-    }
-    if(added > 0){
-      renderPalette();
-      saveCustomModelsToStorage();
-      toast(`★ Загружено моделей: ${added}`);
-    }
-  }
-
   toast(`📂 Проект загружен (${(data.objects3d||[]).length} 3D + ${(data.objects2d||[]).length} 2D)`);
-      } finally { MP.applyingRemote = _mpWasApplying; }
+  scheduleProjectAutosave();
+  } finally { MP.applyingRemote = _mpWasApplying; }
 }
 
 $('btnSave').onclick = () => saveProject();
 $('btnLoad').onclick = () => $('fileLoad').click();
 $('fileLoad').addEventListener('change', (ev) => {
   const f = ev.target.files[0]; if(!f) return;
+  if(f.size > 25 * 1024 * 1024){
+    toast('❌ Файл проекта больше 25 МБ');
+    ev.target.value = '';
+    return;
+  }
   const reader = new FileReader();
   reader.onload = () => {
     try{
       const data = JSON.parse(reader.result);
       loadProjectData(data);
-    }catch(e){ console.error(e); toast('❌ Ошибка чтения JSON'); }
+    }catch(e){ console.error('Project import failed', e); toast(`❌ Проект не загружен: ${e.message}`); }
   };
   reader.readAsText(f);
   ev.target.value = '';
 });
+
+const PROJECT_AUTOSAVE_KEY = 'vvg_project_autosave_v1';
+let projectAutosaveTimer = null;
+function persistProjectAutosave(){
+  if(mode === 'play') return;
+  try{
+    localStorage.setItem(PROJECT_AUTOSAVE_KEY, JSON.stringify(serializeProjectData()));
+  }catch(error){
+    console.error('Project autosave failed', error);
+    toast('⚠️ Не удалось создать автосохранение (проверьте свободное место)');
+  }
+}
+function scheduleProjectAutosave(){
+  clearTimeout(projectAutosaveTimer);
+  projectAutosaveTimer = setTimeout(persistProjectAutosave, 1200);
+}
+function initializeProjectAutosave(){
+  for(const eventName of ['pointerup', 'keyup', 'input', 'change']){
+    document.addEventListener(eventName, scheduleProjectAutosave, true);
+  }
+  window.addEventListener('pagehide', persistProjectAutosave);
+
+  let saved;
+  try{
+    saved = localStorage.getItem(PROJECT_AUTOSAVE_KEY);
+  }catch(error){
+    console.warn('Project autosave is unavailable', error);
+    return;
+  }
+  if(!saved) return;
+  try{
+    const recovered = validateAndNormalizeProject(JSON.parse(saved), {
+      objectTypes: PALETTE.map(item => item.type),
+      backgroundIds: Object.keys(BACKGROUNDS),
+    });
+    if(confirm('Найдено автосохранение проекта. Восстановить его? Нажмите «Отмена», чтобы удалить копию и начать с пустой сцены.')){
+      loadProjectData(recovered);
+      toast('♻️ Автосохранение восстановлено');
+    }else{
+      localStorage.removeItem(PROJECT_AUTOSAVE_KEY);
+    }
+  }catch(error){
+    console.error('Project recovery failed', error);
+    localStorage.removeItem(PROJECT_AUTOSAVE_KEY);
+    toast('⚠️ Автосохранение повреждено и не восстановлено');
+  }
+}
 
 /* ========== КНОПКИ UI ========== */
 $('btnToggleBlocks').onclick = () => {
@@ -5434,7 +5500,7 @@ function deleteCustomModel(id){
 }
   function saveCustomModelsToStorage(){
   try{
-    const data = { version: 1, models: customModels };
+    const data = { version: 1, models: serializeCustomModels() };
     localStorage.setItem('vvg_custom_models', JSON.stringify(data));
   }catch(e){ console.warn('saveCustomModels', e); }
 }
@@ -5444,6 +5510,11 @@ function loadCustomModelsFromStorage(){
     if(!raw) return;
     const data = JSON.parse(raw);
     if(!data || !data.models) return;
+    validateAndNormalizeProject({
+      objects3d: [],
+      objects2d: [],
+      customModels: data.models,
+    });
     Object.assign(customModels, data.models);
     for(const id in data.models){
       if(!PALETTE.find(p => p.type === 'custom_' + id)){
@@ -6269,11 +6340,7 @@ function mpRemoteShoot(msg){
 }
 function mpSerializeProject(){
   return {
-    version: 1, app: 'VolVoxGameDev', dimension, background: currentBg,
-    underground: { depth: undergroundSettings.depth, texture: undergroundSettings.texture },
-    objects3d: objectsByDim['3d'].map(serializeObject),
-    objects2d: objectsByDim['2d'].map(serializeObject),
-    customModels: customModels,
+    ...serializeProjectData(),
   };
 }
 function mpApplyProject(data){
@@ -6509,6 +6576,7 @@ window.addEventListener('beforeunload', () => {
 
   console.log('✅ Guide Panel v2 готова. Кнопка:', openBtn.tagName, openBtn.id);
 })();
+initializeProjectAutosave();
 </script>
 </body>
 </html>
