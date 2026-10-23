@@ -97,6 +97,15 @@ test('editor page and local workflow modules are served over HTTP', async () => 
   assert.match(page, /id="btnLoad"/);
   assert.match(page, /id="fileLoad"/);
   assert.match(page, /id="projectStatus" role="status" aria-live="polite"/);
+  const toolbarGroups = [...page.matchAll(/<div class="toolbar-group[^"]*" role="group" aria-label="([^"]+)">([\s\S]*?)(?=<div class="toolbar-group|<\/header>)/g)];
+  assert.deepEqual(toolbarGroups.map(([, label]) => label), ['Режим редактора', 'Размерность сцены', 'Проект', 'Инструменты']);
+  assert.match(toolbarGroups[0][2], /data-mode="build"/);
+  assert.match(toolbarGroups[1][2], /data-dim="3d"/);
+  assert.match(toolbarGroups[2][2], /id="btnSave"[\s\S]*id="btnLoad"[\s\S]*id="projectStatus"/);
+  assert.match(toolbarGroups[3][2], /id="btnToggleBlocks"[\s\S]*id="btnSettings"[\s\S]*id="btnGames"[\s\S]*id="btnClear"/);
+  assert.match(page, /@media\(max-width:1100px\)\{[\s\S]*?#topbar\{[^}]*flex-wrap:wrap/);
+  assert.match(page, /\.toolbar-tools\{flex:1 1 100%;border-left:0;padding-left:0\}/);
+  assert.match(page, /clearBtn\.parentElement\.insertBefore\(openBtn, clearBtn\)/);
   assert.match(page, /setProjectStatus\(`Автосохранено/);
   assert.match(page, /reader\.onerror =/);
   assert.match(page, /Автосохранение не удалось/);
