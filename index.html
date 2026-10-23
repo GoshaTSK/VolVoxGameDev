@@ -51,6 +51,12 @@
   .btn.games{background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff;border-color:transparent;font-weight:800}
   .btn.icon{width:34px;padding:7px 0;display:grid;place-items:center;font-size:14px}
   .btn.icon.on{background:linear-gradient(135deg,#166534,#22c55e);border-color:#22c55e;color:#fff}
+  .project-status{flex:none;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    padding:5px 8px;border:1px solid var(--border);border-radius:7px;background:#0a1424;
+    color:#a9bcd4;font-size:11px}
+  .project-status[data-state="saved"]{color:#86efac;border-color:#166534}
+  .project-status[data-state="pending"]{color:#fde68a;border-color:#854d0e}
+  .project-status[data-state="error"]{color:#fca5a5;border-color:#991b1b;background:#2a1017}
   #main{display:grid;grid-template-columns:252px 1fr 288px;overflow:hidden;min-height:0;height:100%}
   #main.playing{grid-template-columns:1fr}
   #main.playing aside{display:none}
@@ -599,6 +605,7 @@
     <button class="btn" id="btnSave" title="Сохранить проект в JSON" aria-label="Сохранить проект">💾</button>
     <button class="btn" id="btnLoad" title="Загрузить проект из JSON" aria-label="Загрузить проект">📂</button>
     <input type="file" id="fileLoad" accept=".json,application/json" style="display:none">
+    <div class="project-status" id="projectStatus" role="status" aria-live="polite">Автосохранение запускается…</div>
     <button class="btn modeler" id="btnModeler" title="3D-моделлер">🎨 Моделлер</button>
     <button class="btn games" id="btnGames">🎮 Примеры</button>
     <button class="btn mp" id="btnMultiplayer">🌐 Мультиплеер</button>
@@ -4021,16 +4028,29 @@ function serializeObject(o){
     netId: o.userData.netId || null,
   };
 }
+function setProjectStatus(message, state = 'saved'){
+  const status = $('projectStatus');
+  status.textContent = message;
+  status.title = message;
+  status.dataset.state = state;
+}
 function saveProject(){
-  const data = serializeProjectData();
-  const blob = new Blob([serializeProjectFile(data)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `volvoxgamedev-${Date.now()}.json`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 500);
-  toast('💾 Проект сохранён');
+  try{
+    const data = serializeProjectData();
+    const blob = new Blob([serializeProjectFile(data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `volvoxgamedev-${Date.now()}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 500);
+    setProjectStatus('Экспорт проекта запущен');
+    toast('💾 Экспорт проекта запущен');
+  }catch(error){
+    console.error('Project export failed', error);
+    setProjectStatus(`Не удалось экспортировать проект: ${error.message}. Проверьте браузер и повторите попытку.`, 'error');
+    toast(`❌ Не удалось экспортировать проект: ${error.message}`);
+  }
 }
 function serializeProjectData(){
   return {
@@ -4147,11 +4167,18 @@ $('btnLoad').onclick = () => $('fileLoad').click();
 $('fileLoad').addEventListener('change', (ev) => {
   const f = ev.target.files[0]; if(!f) return;
   if(f.size > 25 * 1024 * 1024){
+    setProjectStatus('Импорт отменён: файл больше 25 МБ.', 'error');
     toast('❌ Файл проекта больше 25 МБ');
     ev.target.value = '';
     return;
   }
   const reader = new FileReader();
+  setProjectStatus(`Чтение проекта: ${f.name}…`, 'pending');
+  const reportReadFailure = error => {
+    console.error('Project file read failed', error);
+    setProjectStatus(`Не удалось прочитать ${f.name}: ${error.message}. Выберите файл ещё раз.`, 'error');
+    toast(`❌ Не удалось прочитать файл проекта: ${error.message}`);
+  };
   reader.onload = () => {
     try{
       const data = parseProjectFile(reader.result, {
@@ -4159,9 +4186,21 @@ $('fileLoad').addEventListener('change', (ev) => {
         backgroundIds: Object.keys(BACKGROUNDS),
       });
       loadProjectData(data);
-    }catch(e){ console.error('Project import failed', e); toast(`❌ Проект не загружен: ${e.message}`); }
+      setProjectStatus(`Проект импортирован: ${f.name}`);
+    }catch(error){
+      console.error('Project import failed', error);
+      setProjectStatus(`Не удалось импортировать проект: ${error.message}. Проверьте файл и повторите попытку.`, 'error');
+      toast(`❌ Проект не загружен: ${error.message}`);
+    }
   };
-  reader.readAsText(f);
+  reader.onerror = () => {
+    reportReadFailure(reader.error || new Error('не удалось прочитать файл'));
+  };
+  try{
+    reader.readAsText(f);
+  }catch(error){
+    reportReadFailure(error);
+  }
   ev.target.value = '';
 });
 
@@ -4170,13 +4209,17 @@ function persistProjectAutosave(){
   if(mode === 'play') return;
   try{
     saveProjectAutosave(localStorage, serializeProjectData());
+    setProjectStatus(`Автосохранено · ${new Date().toLocaleTimeString()}`);
   }catch(error){
     console.error('Project autosave failed', error);
+    setProjectStatus('Автосохранение не удалось. Освободите место в хранилище браузера и повторите попытку.', 'error');
     toast('⚠️ Не удалось создать автосохранение (проверьте свободное место)');
   }
 }
 function scheduleProjectAutosave(){
+  if(mode === 'play') return;
   clearTimeout(projectAutosaveTimer);
+  setProjectStatus('Есть несохранённые изменения…', 'pending');
   projectAutosaveTimer = setTimeout(persistProjectAutosave, 1200);
 }
 function initializeProjectAutosave(){
@@ -4190,23 +4233,44 @@ function initializeProjectAutosave(){
     saved = readProjectAutosave(localStorage);
   }catch(error){
     console.warn('Project autosave is unavailable', error);
+    setProjectStatus('Автосохранение недоступно. Разрешите этому сайту использовать локальное хранилище.', 'error');
     return;
   }
-  if(!saved) return;
+  if(!saved){
+    setProjectStatus('Автосохранение включено');
+    return;
+  }
   try{
     const recovered = parseProjectFile(saved, {
       objectTypes: PALETTE.map(item => item.type),
       backgroundIds: Object.keys(BACKGROUNDS),
     });
+    setProjectStatus('Найдено автосохранение проекта', 'pending');
     if(confirm('Найдено автосохранение проекта. Восстановить его? Нажмите «Отмена», чтобы удалить копию и начать с пустой сцены.')){
       loadProjectData(recovered);
+      setProjectStatus('Проект восстановлен из автосохранения');
       toast('♻️ Автосохранение восстановлено');
     }else{
-      localStorage.removeItem(PROJECT_AUTOSAVE_KEY);
+      try{
+        localStorage.removeItem(PROJECT_AUTOSAVE_KEY);
+        setProjectStatus('Автосохранение удалено · начата пустая сцена');
+      }catch(error){
+        console.error('Project autosave cleanup failed', error);
+        setProjectStatus('Не удалось удалить автосохранение. Проверьте разрешения хранилища браузера.', 'error');
+        toast('⚠️ Не удалось удалить копию автосохранения');
+      }
     }
   }catch(error){
     console.error('Project recovery failed', error);
-    localStorage.removeItem(PROJECT_AUTOSAVE_KEY);
+    try{
+      localStorage.removeItem(PROJECT_AUTOSAVE_KEY);
+    }catch(cleanupError){
+      console.error('Invalid project autosave cleanup failed', cleanupError);
+      setProjectStatus('Автосохранение повреждено, и его не удалось удалить. Импортируйте резервную копию JSON.', 'error');
+      toast('⚠️ Не удалось удалить повреждённое автосохранение');
+      return;
+    }
+    setProjectStatus('Автосохранение повреждено и не восстановлено. Импортируйте резервную копию JSON.', 'error');
     toast('⚠️ Автосохранение повреждено и не восстановлено');
   }
 }

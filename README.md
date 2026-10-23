@@ -26,7 +26,10 @@ Use the disk and folder buttons in the top toolbar to export a project as JSON
 or import a JSON project. Version 1 project files remain supported. The editor
 also keeps a local browser autosave while editing and offers to restore it on
 the next launch. Autosaves are stored in that browser's local storage and are
-not a substitute for exporting a backup.
+not a substitute for exporting a backup. The toolbar reports pending changes,
+the most recent autosave, and project recovery/import/export results. If an
+operation fails, the status explains the next step; autosave failures commonly
+mean the browser's local storage is full or unavailable.
 
 ## Checks
 

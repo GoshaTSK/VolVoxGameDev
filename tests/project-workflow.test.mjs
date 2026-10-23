@@ -96,6 +96,12 @@ test('editor page and local workflow modules are served over HTTP', async () => 
   assert.match(page, /id="btnSave"/);
   assert.match(page, /id="btnLoad"/);
   assert.match(page, /id="fileLoad"/);
+  assert.match(page, /id="projectStatus" role="status" aria-live="polite"/);
+  assert.match(page, /setProjectStatus\(`Автосохранено/);
+  assert.match(page, /reader\.onerror =/);
+  assert.match(page, /Автосохранение не удалось/);
+  assert.match(page, /Не удалось импортировать проект/);
+  assert.match(page, /Не удалось экспортировать проект/);
   assert.match(page, /id="canvas"/);
   assert.match(page, /id="blocklyDiv"/);
   assert.match(page, /from '\.\/project-persistence\.mjs'/);
