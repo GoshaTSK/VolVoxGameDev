@@ -8,6 +8,7 @@ import {
   PROJECT_AUTOSAVE_KEY,
   readProjectAutosave,
   saveProjectAutosave,
+  isQuotaExceededError,
   serializeProjectFile,
 } from '../project-persistence.mjs';
 
@@ -52,6 +53,33 @@ test('autosave persists and restores a project; invalid recovery data is rejecte
   );
 });
 
+test('a quota failure preserves the previous autosave and is identified consistently', () => {
+  const values = new Map();
+  let maxValueLength = Infinity;
+  const storage = {
+    getItem: key => values.get(key) ?? null,
+    setItem(key, value) {
+      if (value.length > maxValueLength) {
+        throw Object.assign(new Error('storage quota exceeded'), { name: 'QuotaExceededError', code: 22 });
+      }
+      values.set(key, value);
+    },
+  };
+
+  saveProjectAutosave(storage, project);
+  const previousAutosave = readProjectAutosave(storage);
+  maxValueLength = previousAutosave.length;
+
+  assert.throws(
+    () => saveProjectAutosave(storage, { ...project, extraData: 'x'.repeat(1000) }),
+    error => isQuotaExceededError(error),
+  );
+  assert.equal(readProjectAutosave(storage), previousAutosave);
+  assert.equal(isQuotaExceededError({ name: 'NS_ERROR_DOM_QUOTA_REACHED' }), true);
+  assert.equal(isQuotaExceededError({ code: 1014 }), true);
+  assert.equal(isQuotaExceededError(new Error('other storage error')), false);
+});
+
 let server;
 let origin;
 before(async () => {
@@ -92,6 +120,7 @@ test('editor page and local workflow modules are served over HTTP', async () => 
   );
 
   const page = await pageResponse.text();
+  const persistence = await persistenceResponse.text();
   assert.match(page, /<main id="main">/);
   assert.match(page, /<div class="toolbar-primary">[\s\S]*?<div class="toolbar-center">[\s\S]*?<details class="toolbar-overflow" id="toolbarOverflow" open>/);
   assert.match(page, /<details class="toolbar-overflow" id="toolbarOverflow" open>/);
@@ -129,10 +158,14 @@ test('editor page and local workflow modules are served over HTTP', async () => 
   assert.match(page, /setProjectStatus\(`Автосохранено/);
   assert.match(page, /reader\.onerror =/);
   assert.match(page, /Автосохранение не удалось/);
+  assert.match(page, /Скачайте проект кнопкой «Сохранить» или освободите место/);
+  assert.match(page, /repeatedFailure = failureKey === lastProjectAutosaveFailure/);
+  assert.match(page, /if\(!repeatedFailure\) console\.error\('Project autosave failed', error\)/);
   assert.match(page, /Не удалось импортировать проект/);
   assert.match(page, /Не удалось экспортировать проект/);
   assert.match(page, /id="canvas"/);
   assert.match(page, /id="blocklyDiv"/);
   assert.match(page, /from '\.\/project-persistence\.mjs'/);
-  assert.match(await persistenceResponse.text(), /export function readProjectAutosave/);
+  assert.match(persistence, /export function readProjectAutosave/);
+  assert.match(persistence, /export function isQuotaExceededError/);
 });
