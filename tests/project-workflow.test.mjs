@@ -93,8 +93,10 @@ test('editor page and local workflow modules are served over HTTP', async () => 
 
   const page = await pageResponse.text();
   assert.match(page, /<main id="main">/);
-  assert.match(page, /<div class="toolbar-primary">[\s\S]*?<div class="toolbar-center">[\s\S]*?<details class="toolbar-overflow" id="toolbarOverflow">/);
+  assert.match(page, /<div class="toolbar-primary">[\s\S]*?<div class="toolbar-center">[\s\S]*?<details class="toolbar-overflow" id="toolbarOverflow" open>/);
+  assert.match(page, /<details class="toolbar-overflow" id="toolbarOverflow" open>/);
   assert.match(page, /<summary class="toolbar-overflow-summary" aria-label="Ещё действия"/);
+  assert.match(page, /const compactToolbar = window\.matchMedia\('\(max-width: 1480px\)'\);[\s\S]*const syncToolbarOverflow = \(\) => \{ toolbarOverflow\.open = !compactToolbar\.matches; \};[\s\S]*syncToolbarOverflow\(\);[\s\S]*compactToolbar\.addEventListener\('change', syncToolbarOverflow\);/);
   assert.match(page, /<div class="toolbar-overflow-content">[\s\S]*<div class="toolbar-actions" role="group" aria-label="Проект и настройки">[\s\S]*id="btnSave"[\s\S]*id="btnLoad"[\s\S]*id="btnSettings"[\s\S]*<div class="toolbar-group toolbar-tools" role="group" aria-label="Инструменты">/);
   assert.match(page, /id="fileLoad"/);
   assert.match(page, /id="projectStatus" role="status" aria-live="polite" aria-atomic="true"[^>]*title="Автосохранение запускается…" tabindex="0"/);
@@ -116,6 +118,7 @@ test('editor page and local workflow modules are served over HTTP', async () => 
   assert.match(page, /#topbar\{position:relative;display:flex;align-items:center;[^}]*backdrop-filter:blur\(24px\)/);
   assert.match(page, /\.toolbar-primary\{display:flex;align-items:center;[^}]*flex-wrap:nowrap/);
   assert.match(page, /@media\(max-width:1480px\)\{[\s\S]*?\.toolbar-overflow-summary\{display:flex/);
+  assert.match(page, /\.toolbar-overflow-content\{display:flex;align-items:center;gap:6px\}/);
   assert.match(page, /@media\(max-width:380px\)\{[\s\S]*?\.mode-label-short\{display:inline\}/);
   assert.match(page, /\.toolbar-overflow\[open\] \.toolbar-overflow-content\{display:flex;flex-direction:column\}/);
   assert.match(page, /event\.key === 'Escape' && toolbarOverflow\.open/);
