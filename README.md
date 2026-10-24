@@ -33,7 +33,9 @@ shows the autosave state; focus or hover it to read the detailed status,
 including pending changes and project recovery/import/export results. The
 status remains available to screen readers. If an operation fails, it explains
 the next step; autosave failures commonly mean the browser's local storage is
-full or unavailable.
+full or unavailable. When an autosave cannot fit, the last successful copy is
+kept; download the project manually or free browser storage before editing
+further. A later edit retries autosaving.
 
 ## Checks
 

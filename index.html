@@ -913,6 +913,7 @@ import {
   PROJECT_AUTOSAVE_KEY,
   readProjectAutosave,
   saveProjectAutosave,
+  isQuotaExceededError,
   serializeProjectFile,
 } from './project-persistence.mjs';
 
@@ -4320,15 +4321,26 @@ $('fileLoad').addEventListener('change', (ev) => {
 });
 
 let projectAutosaveTimer = null;
+let lastProjectAutosaveFailure = null;
 function persistProjectAutosave(){
   if(mode === 'play') return;
   try{
     saveProjectAutosave(localStorage, serializeProjectData());
+    lastProjectAutosaveFailure = null;
     setProjectStatus(`Автосохранено · ${new Date().toLocaleTimeString()}`);
   }catch(error){
-    console.error('Project autosave failed', error);
-    setProjectStatus('Автосохранение не удалось. Освободите место в хранилище браузера и повторите попытку.', 'error');
-    toast('⚠️ Не удалось создать автосохранение (проверьте свободное место)');
+    const quotaExceeded = isQuotaExceededError(error);
+    const failureKey = quotaExceeded ? 'quota' : `${error?.name || 'Error'}:${error?.message || String(error)}`;
+    const repeatedFailure = failureKey === lastProjectAutosaveFailure;
+    if(!repeatedFailure) console.error('Project autosave failed', error);
+    lastProjectAutosaveFailure = failureKey;
+
+    if(quotaExceeded){
+      setProjectStatus('Автосохранение не удалось: недостаточно места. Скачайте проект кнопкой «Сохранить» или освободите место в хранилище браузера.', 'error');
+    }else{
+      setProjectStatus(`Автосохранение не удалось: ${error?.message || 'неизвестная ошибка'}. Скачайте проект кнопкой «Сохранить» и проверьте хранилище браузера.`, 'error');
+    }
+    if(!repeatedFailure) toast('⚠️ Не удалось создать автосохранение. Скачайте проект вручную или освободите место.');
   }
 }
 function scheduleProjectAutosave(){
