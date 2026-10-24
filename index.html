@@ -28,7 +28,7 @@
   .toolbar-project{gap:5px}
   .toolbar-overflow{display:contents}
   .toolbar-overflow-summary{display:none}
-  .toolbar-overflow-content{display:contents}
+  .toolbar-overflow-content{display:flex;align-items:center;gap:6px}
   .toolbar-tools{display:flex;align-items:center;gap:2px;flex:none;min-width:0}
   /* ==== GUIDE PANEL ==== */
    .logo{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;
@@ -670,7 +670,7 @@
       </div>
       <div class="score-hud" id="scoreHud" aria-label="Очки" aria-live="polite">♥ <span id="scoreVal">0</span></div>
       <div class="timer-hud" id="timerHud">⏱ <span id="timerVal">00:00.00</span></div>
-      <details class="toolbar-overflow" id="toolbarOverflow">
+      <details class="toolbar-overflow" id="toolbarOverflow" open>
         <summary class="toolbar-overflow-summary" aria-label="Ещё действия" title="Дополнительные действия">
           <span aria-hidden="true">•••</span><span class="toolbar-more-label">Ещё</span>
         </summary>
@@ -699,6 +699,15 @@
       </details>
     </div>
   </header>
+  <script>
+    {
+      const toolbarOverflow = document.getElementById('toolbarOverflow');
+      const compactToolbar = window.matchMedia('(max-width: 1480px)');
+      const syncToolbarOverflow = () => { toolbarOverflow.open = !compactToolbar.matches; };
+      syncToolbarOverflow();
+      compactToolbar.addEventListener('change', syncToolbarOverflow);
+    }
+  </script>
   <main id="main">
     <aside id="palette" aria-label="Библиотека объектов и список сцены">
       <div class="panel-title">Библиотека <span class="count" id="palCount">0</span></div>
